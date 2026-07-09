@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shipment Console — Labels & Warehouse Emails</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#181B1F; --ink2:#4A4F57; --paper:#F2F1ED; --panel:#FFFFFF;
+    --line:#D8D5CC; --line2:#B9B5A9; --accent:#A34808; --accent-soft:#F6E7DA;
+    --ok:#1E6E46; --ok-soft:#E2F0E8; --warn:#8A5A00; --warn-soft:#FBF0D7;
+    --err:#9C2B24; --err-soft:#F8E5E3;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Courier New",monospace;
+    --sans:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  button{font-family:var(--sans);cursor:pointer}
+  input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);
+    border:1px solid var(--line2);border-radius:4px;padding:8px 10px;background:#fff;width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  textarea{font-family:var(--mono);font-size:13px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:5px}
+
+  /* label-style masthead: heavy rule like an FBA label header */
+  header{background:var(--panel);border-bottom:4px solid var(--ink);padding:14px 22px;
+    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  header .brand{font-weight:900;font-size:22px;letter-spacing:.02em}
+  header .brand span{color:var(--accent)}
+  header .meta{font-family:var(--mono);font-size:12px;color:var(--ink2)}
+
+  nav{display:flex;gap:0;background:var(--panel);border-bottom:1px solid var(--line);padding:0 22px;overflow-x:auto}
+  nav button{background:none;border:none;border-bottom:3px solid transparent;padding:12px 16px;
+    font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap}
+  nav button.active{color:var(--ink);border-bottom-color:var(--accent)}
+  nav button:hover{color:var(--ink)}
+
+  main{max-width:1060px;margin:0 auto;padding:26px 22px 80px}
+  .tab{display:none}.tab.active{display:block}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;margin-bottom:18px}
+  .card h2{font-size:15px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .card h2 .step{font-family:var(--mono);font-size:11px;color:var(--ink2);font-weight:400;text-transform:none;letter-spacing:0}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:720px){.g2,.g3{grid-template-columns:1fr}}
+  .hint{font-size:12.5px;color:var(--ink2);margin-top:5px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  .btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:4px;
+    padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .btn:hover{background:#000}
+  .btn.alt{background:#fff;color:var(--ink)}
+  .btn.alt:hover{background:var(--paper)}
+  .btn.accent{background:var(--accent);border-color:var(--accent)}
+  .btn.accent:hover{background:#8A3C06}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.sm{padding:6px 12px;font-size:11.5px}
+
+  .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--line2)}
+  .pill.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+  .pill.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+  .pill.err{background:var(--err-soft);color:var(--err);border-color:var(--err)}
+
+  .note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 4px 4px 0;font-size:13px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:var(--ok-soft)}
+  .note.warn{border-color:var(--warn);background:var(--warn-soft)}
+  .note.err{border-color:var(--err);background:var(--err-soft)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
+    border-bottom:2px solid var(--ink);padding:6px 8px}
+  td{border-bottom:1px solid var(--line);padding:7px 8px;font-family:var(--mono);font-size:12.5px}
+
+  /* file drop */
+  .drop{border:1.5px dashed var(--line2);border-radius:6px;padding:16px;text-align:center;color:var(--ink2);
+    font-size:13px;background:#FBFAF8;cursor:pointer}
+  .drop.has{border-style:solid;border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+  .drop input{display:none}
+  .drop .fname{font-family:var(--mono);font-weight:700;word-break:break-all}
+
+  /* the signature element: email preview rendered as a paper document */
+  .sheet{background:#fff;border:1px solid var(--line2);border-top:5px solid var(--ink);
+    box-shadow:0 2px 0 var(--line);padding:22px 26px;font-family:var(--mono);font-size:12.5px;
+    white-space:pre-wrap;word-break:break-word;max-height:520px;overflow:auto}
+  .sheet .subj{font-family:var(--sans);font-weight:800;font-size:14px;border-bottom:1px solid var(--line);
+    padding-bottom:8px;margin-bottom:10px;white-space:normal}
+
+  /* brand blocks */
+  .brandblock{border:1px solid var(--line2);border-left:4px solid var(--accent);border-radius:4px;padding:16px;margin-bottom:14px;background:#FDFCFA}
+  .brandblock .bhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .brandblock .bhead b{font-size:13px;letter-spacing:.05em;text-transform:uppercase}
+  .seg{display:inline-flex;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
+  .seg button{border:none;background:#fff;padding:8px 16px;font-size:12.5px;font-weight:700;letter-spacing:.03em}
+  .seg button.on{background:var(--ink);color:#fff}
+
+  /* gate */
+  #gate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50}
+  #gate .box{background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--ink);
+    border-radius:6px;padding:34px;width:min(420px,92vw)}
+  #gate h1{font-size:20px;font-weight:900;margin-bottom:4px}
+  #gate h1 span{color:var(--accent)}
+  #gate p{font-size:13px;color:var(--ink2);margin-bottom:18px}
+
+  .loglist .entry{border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin-bottom:10px;background:#fff}
+  .loglist .entry .top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px}
+  .loglist .entry .top b{letter-spacing:.02em}
+  .loglist .entry .sub{font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-top:4px}
+  .empty{text-align:center;color:var(--ink2);font-size:13px;padding:30px;border:1.5px dashed var(--line2);border-radius:6px}
+
+  footer{max-width:1060px;margin:0 auto;padding:0 22px 30px;font-size:11.5px;color:var(--ink2);font-family:var(--mono)}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ================= ACCESS GATE ================= -->
+<div id="gate">
+  <div class="box">
+    <h1>Shipment <span>Console</span></h1>
+    <p>Team access only. Enter the access code and your name to continue. Your name is recorded in the shipment log.</p>
+    <div class="grid" style="gap:12px">
+      <div><label for="gateCode">Access code</label><input type="password" id="gateCode" autocomplete="off"></div>
+      <div><label for="gateName">Your name</label><input type="text" id="gateName" placeholder="e.g. Sania"></div>
+      <div id="gateErr" class="note err" style="display:none">Incorrect access code. Check with your team lead.</div>
+      <button class="btn accent" onclick="unlock()">Enter console</button>
+    </div>
+  </div>
+</div>
+
+<header style="display:none" id="appHeader">
+  <div class="brand">SHIPMENT <span>CONSOLE</span></div>
+  <div class="meta" id="userMeta"></div>
+</header>
+
+<nav style="display:none" id="appNav">
+  <button class="active" data-tab="labels" onclick="showTab('labels')">1 · Box Labels</button>
+  <button data-tab="email" onclick="showTab('email')">2 · Shipment Email</button>
+  <button data-tab="log" onclick="showTab('log')">3 · Shipment Log</button>
+  <button data-tab="help" onclick="showTab('help')">Guidelines</button>
+</nav>
+
+<main style="display:none" id="appMain">
+
+<!-- ================= TAB 1: LABEL STAMPER ================= -->
+<section class="tab active" id="tab-labels">
+  <div class="card">
+    <h2>Upload label PDF <span class="step">FBA + UPS labels, one file</span></h2>
+    <div class="drop" id="dropPdf" onclick="document.getElementById('pdfInput').click()">
+      <input type="file" id="pdfInput" accept="application/pdf">
+      <div id="dropPdfText">Click to choose the labels PDF (e.g. FBA &amp; UPS Labels – ET Small Items)</div>
+    </div>
+    <div class="hint" id="pdfInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Box numbers <span class="step">Excel sheet or paste</span></h2>
+    <div class="grid g2">
+      <div>
+        <label>Option A — Excel / CSV sheet</label>
+        <div class="drop" id="dropXls" onclick="document.getElementById('xlsInput').click()">
+          <input type="file" id="xlsInput" accept=".xlsx,.xlsm,.csv">
+          <div id="dropXlsText">Sheet with a <b>Carton No</b> column (optional <b>Box No</b> column for explicit order)</div>
+        </div>
+      </div>
+      <div>
+        <label for="pasteBoxes">Option B — paste box numbers (one per line, in box order)</label>
+        <textarea id="pasteBoxes" rows="5" placeholder="19292&#10;22874&#10;14589"></textarea>
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:14px">
+      <div>
+        <label for="stampSize">Stamp size</label>
+        <select id="stampSize">
+          <option value="18">Small (18 pt)</option>
+          <option value="24" selected>Standard (24 pt) — approved style</option>
+          <option value="32">Large (32 pt)</option>
+          <option value="40">Extra large (40 pt)</option>
+        </select>
+      </div>
+      <div>
+        <label for="stampPos">Position from bottom</label>
+        <select id="stampPos">
+          <option value="45" selected>Standard (45 pt)</option>
+          <option value="30">Lower (30 pt)</option>
+          <option value="65">Higher (65 pt)</option>
+        </select>
+      </div>
+      <div style="align-self:end">
+        <button class="btn" style="width:100%" onclick="analyzeLabels()">Match boxes to labels</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="matchCard" style="display:none">
+    <h2>Review mapping <span class="step">check before stamping</span></h2>
+    <div id="matchNotes"></div>
+    <div style="overflow-x:auto"><table id="matchTable"></table></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn accent" id="stampBtn" onclick="stampPdf()">Stamp &amp; download PDF</button>
+      <span id="stampStatus" class="hint"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TAB 2: SHIPMENT EMAIL ================= -->
+<section class="tab" id="tab-email">
+  <div class="card">
+    <h2>Shipment type <span class="step">select and proceed</span></h2>
+    <div class="seg" role="radiogroup" aria-label="Shipment type">
+      <button id="segUPS" class="on" onclick="setShipType('UPS')">UPS Boxes</button>
+      <button id="segPAL" onclick="setShipType('PALLET')">Pallet</button>
+    </div>
+    <div class="hint" id="typeHint">UPS shipment: send UPS labels as ONE label (do not split FBA/UPS), and total weight is required to schedule pickup. Coordinate with other brands so all UPS boxes pick up on one day.</div>
+  </div>
+
+  <div class="card">
+    <h2>Brand-wise details <span class="step">add each brand in this shipment</span></h2>
+    <div id="brandBlocks"></div>
+    <button class="btn alt sm" onclick="addBrand()">+ Add another brand</button>
+  </div>
+
+  <div class="card">
+    <h2>Attachments <span class="step">embedded into the .eml draft</span></h2>
+    <div class="grid g3">
+      <div>
+        <label>Bill of Lading (BOL) <span id="bolReq" style="color:var(--err)">— mandatory for pallet</span></label>
+        <div class="drop" onclick="document.getElementById('attBOL').click()" id="dropBOL">
+          <input type="file" id="attBOL" accept="application/pdf,image/*"><div id="dropBOLText">Attach BOL</div>
+        </div>
+      </div>
+      <div>
+        <label>Pallet labels <span style="color:var(--ink2);text-transform:none">(4 copies of each)</span></label>
+        <div class="drop" onclick="document.getElementById('attPallet').click()" id="dropPallet">
+          <input type="file" id="attPallet" accept="application/pdf" multiple><div id="dropPalletText">Attach pallet labels</div>
+        </div>
+      </div>
+      <div>
+        <label>Box labels <span style="color:var(--ink2);text-transform:none">(ascending order)</span></label>
+        <div class="drop" onclick="document.getElementById('attBoxes').click()" id="dropBoxes">
+          <input type="file" id="attBoxes" accept="application/pdf" multiple><div id="dropBoxesText">Attach box labels (use the stamped PDF from step 1)</div>
+        </div>
+      </div>
+    </div>
+    <div class="hint">Tip: mail apps can't receive attachments through "Open in mail app". Download the <b>.eml draft</b> instead — it opens in Outlook with everything attached.</div>
+  </div>
+
+  <div class="card">
+    <h2>Recipients <span class="step">USA warehouse team</span></h2>
+    <div class="grid g2">
+      <div><label for="toEmails">To (comma-separated)</label><input id="toEmails" placeholder="warehouse@company.com"></div>
+      <div><label for="ccEmails">Cc (optional)</label><input id="ccEmails" placeholder="ops@company.com"></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn accent" onclick="buildEmail(true)">Generate email</button>
+    </div>
+  </div>
+
+  <div class="card" id="emailCard" style="display:none">
+    <h2>Email preview <span class="step">guideline checks below</span></h2>
+    <div id="emailChecks"></div>
+    <div class="sheet" id="emailSheet"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn" onclick="downloadEml()">Download .eml draft (with attachments)</button>
+      <button class="btn alt" onclick="openMailto()">Open in mail app</button>
+      <button class="btn alt" onclick="copyEmail()">Copy email text</button>
+      <button class="btn alt" onclick="logShipment()">Save to shipment log</button>
+      <span class="hint" id="emailStatus"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TAB 3: LOG ================= -->
+<section class="tab" id="tab-log">
+  <div class="card">
+    <h2>Shipment log <span class="step">visible to everyone using this app</span></h2>
+    <div class="hint" style="margin-bottom:12px">Every saved shipment is recorded here with the sender's name so the team can view the process. Remember: also update the master Excel file (Pallet/Boxes – CBM vs Cost) for every shipment, even a single Jumbo box.</div>
+    <div class="loglist" id="logList"><div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div></div>
+  </div>
+</section>
+
+<!-- ================= TAB 4: GUIDELINES ================= -->
+<section class="tab" id="tab-help">
+  <div class="card">
+    <h2>Shipping &amp; documentation guidelines</h2>
+    <div style="font-size:13.5px;line-height:1.7">
+      <p><b>Required email details (in the body, explicitly):</b> Brand · FBA ID · Pickup Date · No. of Pallets / No. of Boxes · Carrier.</p>
+      <p style="margin-top:8px"><b>Mandatory attachments:</b> Bill of Lading (BOL); pallet labels — 4 copies of each individual pallet label; box labels — organized and attached in ascending order.</p>
+      <p style="margin-top:8px"><b>Box list format:</b> list each box individually, in ascending order, one per row. Never group multiple box numbers into a single row.</p>
+      <p style="margin-top:8px"><b>Highlights:</b> boxes needing relabeling must be highlighted in the email body (even if updated labels were sent separately). Cross-brand boxes mixed into the shipment must also be highlighted.</p>
+      <p style="margin-top:8px"><b>UPS shipments:</b> send UPS labels as one label (do not break into FBA + UPS); share the total weight (required to schedule pickup); coordinate across brands so all UPS boxes pick up on one day.</p>
+      <p style="margin-top:8px"><b>Single orders from a Jumbo box:</b> mention Brand, Box #, Item, FNSKU, and Carrier (UPS/FedEx/USPS). Use the "Single order" note field in the brand block.</p>
+      <p style="margin-top:8px"><b>Tracking:</b> update every shipment on the shared Excel file (Pallet/Boxes – CBM vs Cost), even one Jumbo box.</p>
+      <p style="margin-top:8px"><b>Timing:</b> email Amazon shipment pickups at least 3 days before the pickup date. The app warns you if the pickup date is too close.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer style="display:none" id="appFooter">SHIPMENT CONSOLE · box label stamping + warehouse email builder · access-coded · log is shared with all app users</footer>
+
+<script>
+/* ======================= CONFIG ======================= */
+const ACCESS_CODE = "ET-2026";   // change this code to control who can enter
+/* ====================================================== */
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+let userName = "";
+let pdfBytes = null, pdfName = "";
+let sheetMapping = null;          // {seq: carton}
+let pageAssignments = null;       // [{page, seq}]
+let mappingReady = null;          // {seq: carton} final
+let shipType = "UPS";
+let brands = [];
+let attachments = { bol: [], pallet: [], boxes: [] };
+let lastEmail = null;
+
+/* ---------- gate ---------- */
+function unlock(){
+  const code = document.getElementById('gateCode').value.trim();
+  const name = document.getElementById('gateName').value.trim();
+  if(code !== ACCESS_CODE){ document.getElementById('gateErr').style.display='block'; return; }
+  if(!name){ alert("Please enter your name — it is recorded in the shipment log."); return; }
+  userName = name;
+  document.getElementById('gate').style.display='none';
+  for(const id of ['appHeader','appNav','appFooter']) document.getElementById(id).style.display='';
+  document.getElementById('appMain').style.display='block';
+  document.getElementById('userMeta').textContent = "USER: " + userName.toUpperCase() + "  ·  " + new Date().toLocaleDateString();
+  addBrand();
+  loadLog();
+}
+document.getElementById('gateCode').addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
+document.getElementById('gateName').addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
+
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.querySelector('nav button[data-tab="'+id+'"]').classList.add('active');
+  if(id==='log') loadLog();
+}
+
+/* ---------- tab 1: label stamper ---------- */
+document.getElementById('pdfInput').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  pdfBytes = new Uint8Array(await f.arrayBuffer()); pdfName = f.name;
+  const d = document.getElementById('dropPdf'); d.classList.add('has');
+  document.getElementById('dropPdfText').innerHTML = '<span class="fname">'+esc(f.name)+'</span> loaded';
+  document.getElementById('pdfInfo').textContent = "";
+});
+
+document.getElementById('xlsInput').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:'array'});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:null});
+    sheetMapping = parseSheetRows(rows);
+    const d = document.getElementById('dropXls'); d.classList.add('has');
+    document.getElementById('dropXlsText').innerHTML = '<span class="fname">'+esc(f.name)+'</span> — '+Object.keys(sheetMapping).length+' carton numbers read';
+  }catch(err){ alert("Could not read that sheet: " + err.message); }
+});
+
+function parseSheetRows(rows){
+  rows = rows.filter(r => r && r.some(c => c !== null && c !== ""));
+  if(!rows.length) throw new Error("sheet is empty");
+  const header = rows[0].map(c => String(c ?? '').trim().toLowerCase());
+  const hasHeader = header.some(h => /[a-z]/.test(h));
+  const find = (...keys) => { for(let i=0;i<header.length;i++){ if(keys.some(k=>header[i].includes(k))) return i; } return null; };
+  let seqCol = null, cartonCol = null;
+  if(hasHeader){
+    seqCol = find("box no","box#","seq","order");
+    cartonCol = find("carton","box number");
+    if(seqCol===null){ const b=find("box"), c=find("carton"); if(b!==null && c!==null && b!==c) seqCol=b; }
+  }
+  if(cartonCol===null) cartonCol = 0;
+  const data = hasHeader ? rows.slice(1) : rows;
+  const map = {};
+  data.forEach((r,i)=>{
+    let carton = r[cartonCol]; if(carton===null||carton==="") return;
+    carton = String(carton).trim().replace(/\.0$/,'');
+    let seq = (seqCol!==null && r[seqCol]!==null && r[seqCol]!=="") ? parseInt(r[seqCol]) : (i+1);
+    map[seq] = carton;
+  });
+  return map;
+}
+
+async function analyzeLabels(){
+  if(!pdfBytes){ alert("Upload the labels PDF first."); return; }
+  const pasted = document.getElementById('pasteBoxes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  let mapping = null;
+  if(pasted.length){ mapping = {}; pasted.forEach((v,i)=>{ const m=v.match(/^(\d+)\s*[:\-]\s*(\S+)$/); if(m) mapping[parseInt(m[1])]=m[2]; else mapping[i+1]=v.replace(/[^\w\-]/g,''); }); }
+  else if(sheetMapping){ mapping = sheetMapping; }
+  else { alert("Provide box numbers — upload a sheet or paste them."); return; }
+
+  const notes = document.getElementById('matchNotes'); notes.innerHTML = "<div class='hint'>Reading PDF pages…</div>";
+  document.getElementById('matchCard').style.display='block';
+
+  const doc = await pdfjsLib.getDocument({data: pdfBytes.slice()}).promise;
+  const rx = /Box\s+(\d+)\s+of\s+(\d+)/i;
+  let current = null; pageAssignments = [];
+  for(let p=1;p<=doc.numPages;p++){
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    const text = tc.items.map(i=>i.str).join(" ");
+    const m = text.match(rx);
+    if(m) current = parseInt(m[1]);
+    pageAssignments.push({page:p, seq:current});
+  }
+
+  const seqs = [...new Set(pageAssignments.filter(a=>a.seq!==null).map(a=>a.seq))].sort((a,b)=>a-b);
+  let html = ""; let ok = true;
+  if(!seqs.length){
+    ok = false;
+    html += "<div class='note err'>No \"Box X of N\" text found in this PDF — it may be scanned images only. Send it to Claude in chat instead, or check the file.</div>";
+  }
+  const missing = seqs.filter(s=>!(s in mapping));
+  if(missing.length){ ok=false; html += "<div class='note err'>Sheet has no carton number for box(es): "+missing.join(", ")+".</div>"; }
+  const extra = Object.keys(mapping).map(Number).filter(s=>!seqs.includes(s));
+  if(extra.length){ html += "<div class='note warn'>Rows for box(es) "+extra.join(", ")+" have no matching box in the PDF — they will be ignored.</div>"; }
+  if(ok){ html += "<div class='note ok'>"+seqs.length+" boxes detected across "+doc.numPages+" pages. Review the mapping, then stamp.</div>"; }
+  notes.innerHTML = html;
+
+  let t = "<tr><th>Box</th><th>Stamp text</th><th>Pages</th></tr>";
+  for(const s of seqs){
+    const pages = pageAssignments.filter(a=>a.seq===s).map(a=>a.page).join(", ");
+    t += "<tr><td>Box "+s+"</td><td><b>BOX "+esc(mapping[s]??"—")+"</b></td><td>"+pages+"</td></tr>";
+  }
+  document.getElementById('matchTable').innerHTML = t;
+  document.getElementById('stampBtn').disabled = !ok;
+  mappingReady = ok ? mapping : null;
+}
+
+async function stampPdf(){
+  if(!mappingReady || !pageAssignments) return;
+  const st = document.getElementById('stampStatus'); st.textContent = "Stamping…";
+  try{
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const doc = await PDFDocument.load(pdfBytes);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const size = parseInt(document.getElementById('stampSize').value);
+    const baseline = parseInt(document.getElementById('stampPos').value);
+    const pages = doc.getPages();
+    for(const a of pageAssignments){
+      if(a.seq===null || !(a.seq in mappingReady)) continue;
+      const pg = pages[a.page-1];
+      const txt = "BOX " + mappingReady[a.seq];
+      const w = font.widthOfTextAtSize(txt, size);
+      pg.drawText(txt, { x:(pg.getWidth()-w)/2, y:baseline, size, font, color:rgb(0,0,0) });
+    }
+    const out = await doc.save();
+    const blob = new Blob([out], {type:'application/pdf'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = pdfName.replace(/\.pdf$/i,'') + "_with_Box_Numbers.pdf";
+    a.click();
+    st.textContent = "Done — stamped PDF downloaded. Attach it as the box labels in step 2.";
+  }catch(err){ st.textContent = "Error: " + err.message; }
+}
+
+/* ---------- tab 2: shipment email ---------- */
+function setShipType(t){
+  shipType = t;
+  document.getElementById('segUPS').classList.toggle('on', t==='UPS');
+  document.getElementById('segPAL').classList.toggle('on', t==='PALLET');
+  document.getElementById('typeHint').textContent = t==='UPS'
+    ? "UPS shipment: send UPS labels as ONE label (do not split FBA/UPS), and total weight is required to schedule pickup. Coordinate with other brands so all UPS boxes pick up on one day."
+    : "Pallet shipment: BOL is mandatory, attach 4 copies of each individual pallet label, and box labels in ascending order.";
+  document.getElementById('bolReq').style.display = t==='PALLET' ? '' : 'none';
+  renderBrands();
+}
+
+function addBrand(){
+  brands.push({ brand:"", fbaId:"", pickup:"", pallets:"", boxes:"", carrier:"", weight:"", boxList:"", relabel:"", crossBrand:"", singleOrder:"" });
+  renderBrands();
+}
+function removeBrand(i){ brands.splice(i,1); if(!brands.length) addBrand(); renderBrands(); }
+function upd(i, k, v){ brands[i][k] = v; }
+
+function renderBrands(){
+  const c = document.getElementById('brandBlocks'); c.innerHTML = "";
+  brands.forEach((b,i)=>{
+    const div = document.createElement('div'); div.className='brandblock';
+    div.innerHTML = `
+      <div class="bhead"><b>Brand ${i+1}</b>${brands.length>1?`<button class="btn alt sm" onclick="removeBrand(${i})">Remove</button>`:''}</div>
+      <div class="grid g3">
+        <div><label>Brand</label><input value="${esc(b.brand)}" oninput="upd(${i},'brand',this.value)" placeholder="EarthenTones"></div>
+        <div><label>FBA ID</label><input value="${esc(b.fbaId)}" oninput="upd(${i},'fbaId',this.value)" placeholder="FBA19GS9FLZ3U"></div>
+        <div><label>Pickup date</label><input type="date" value="${esc(b.pickup)}" oninput="upd(${i},'pickup',this.value)"></div>
+        ${shipType==='PALLET' ? `
+        <div><label>No. of pallets</label><input type="number" min="1" value="${esc(b.pallets)}" oninput="upd(${i},'pallets',this.value)" placeholder="9"></div>
+        <div><label>Carrier</label><input value="${esc(b.carrier)}" oninput="upd(${i},'carrier',this.value)" placeholder="Estes"></div>
+        <div><label>No. of boxes (on pallets)</label><input type="number" min="0" value="${esc(b.boxes)}" oninput="upd(${i},'boxes',this.value)" placeholder="260"></div>
+        ` : `
+        <div><label>No. of boxes</label><input type="number" min="1" value="${esc(b.boxes)}" oninput="upd(${i},'boxes',this.value)" placeholder="8"></div>
+        <div><label>Total weight (lb) — required</label><input type="number" min="1" value="${esc(b.weight)}" oninput="upd(${i},'weight',this.value)" placeholder="274"></div>
+        <div><label>Carrier</label><input value="UPS" disabled></div>
+        `}
+      </div>
+      <div class="grid g3" style="margin-top:12px">
+        <div><label>Box list (one per line, ascending)</label><textarea rows="5" oninput="upd(${i},'boxList',this.value)" placeholder="14589&#10;19292&#10;21742">${esc(b.boxList)}</textarea>
+          <div class="hint">Each box on its own line — never grouped.</div></div>
+        <div><label>Relabeling required — box #s</label><textarea rows="5" oninput="upd(${i},'relabel',this.value)" placeholder="22141">${esc(b.relabel)}</textarea>
+          <div class="hint">Highlighted in the email body.</div></div>
+        <div><label>Cross-brand boxes — box #s</label><textarea rows="5" oninput="upd(${i},'crossBrand',this.value)" placeholder="Box 22874 belongs to Radicaln">${esc(b.crossBrand)}</textarea>
+          <div class="hint">Boxes from another brand mixed in.</div></div>
+      </div>
+      <div style="margin-top:12px"><label>Single order from Jumbo box (optional)</label>
+        <input value="${esc(b.singleOrder)}" oninput="upd(${i},'singleOrder',this.value)" placeholder="Box 19292 · Marble Chess Set · FNSKU B0FCM23THC · Carrier UPS">
+        <div class="hint">If shipping a single item from a Jumbo box: Brand, Box #, Item, FNSKU, Carrier.</div></div>`;
+    c.appendChild(div);
+  });
+}
+
+for(const [id,key] of [['attBOL','bol'],['attPallet','pallet'],['attBoxes','boxes']]){
+  document.getElementById(id).addEventListener('change', async e=>{
+    const files = [...e.target.files]; if(!files.length) return;
+    attachments[key] = [];
+    for(const f of files){
+      attachments[key].push({ name:f.name, type:f.type||'application/octet-stream', b64: await toB64(f) });
+    }
+    const dropId = 'drop'+id.slice(3);
+    document.getElementById(dropId).classList.add('has');
+    document.getElementById(dropId+'Text').innerHTML = files.map(f=>'<span class="fname">'+esc(f.name)+'</span>').join('<br>');
+  });
+}
+function toB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+
+function fmtDate(iso){
+  if(!iso) return "";
+  const d = new Date(iso+"T00:00:00");
+  const months=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  return String(d.getDate()).padStart(2,'0')+" "+months[d.getMonth()]+", "+d.getFullYear();
+}
+function parseList(s){ return s.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); }
+
+function buildEmail(show){
+  const checks = [];
+  const type = shipType;
+  const bNames = brands.map(b=>b.brand.trim()).filter(Boolean);
+  if(!bNames.length) checks.push(["err","Brand name is missing."]);
+
+  let body = "Hi Team,\n\nPlease find below the shipment details:\n";
+  brands.forEach((b,i)=>{
+    body += "\n" + "-".repeat(46) + "\n";
+    body += "Brand: " + (b.brand||"—") + "\n";
+    body += "FBA ID: " + (b.fbaId||"—") + "\n";
+    body += "Pickup Date: " + (fmtDate(b.pickup)||"—") + "\n";
+    if(type==='PALLET'){
+      body += "Shipment Type: Pallet\n";
+      body += "No. of Pallets: " + (b.pallets||"—") + "\n";
+      if(b.boxes) body += "No. of Boxes: " + b.boxes + "\n";
+      body += "Carrier: " + (b.carrier||"—") + "\n";
+      if(!b.pallets) checks.push(["err", (b.brand||("Brand "+(i+1)))+": number of pallets is missing."]);
+      if(!b.carrier) checks.push(["err", (b.brand||("Brand "+(i+1)))+": carrier is missing (e.g. Estes)."]);
+    } else {
+      body += "Shipment Type: UPS Boxes\n";
+      body += "No. of Boxes: " + (b.boxes||"—") + "\n";
+      body += "Carrier: UPS\n";
+      body += "Total Weight: " + (b.weight ? b.weight+" lb" : "—") + "\n";
+      if(!b.boxes) checks.push(["err", (b.brand||("Brand "+(i+1)))+": number of boxes is missing."]);
+      if(!b.weight) checks.push(["err", (b.brand||("Brand "+(i+1)))+": total weight is required for UPS pickups."]);
+    }
+    if(!b.fbaId) checks.push(["err",(b.brand||("Brand "+(i+1)))+": FBA ID is missing."]);
+    if(!b.pickup) checks.push(["err",(b.brand||("Brand "+(i+1)))+": pickup date is missing."]);
+    else {
+      const days = Math.floor((new Date(b.pickup+"T00:00:00") - new Date(new Date().toDateString())) / 86400000);
+      if(days < 3) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": pickup is in "+days+" day(s). Guidelines ask for the email to go out at least 3 days before pickup."]);
+    }
+
+    const list = parseList(b.boxList);
+    if(list.length){
+      const grouped = list.filter(x=>/[,;]|(\d\s*[-–]\s*\d)|\band\b/i.test(x));
+      if(grouped.length) checks.push(["err",(b.brand||("Brand "+(i+1)))+": box list has grouped rows ("+grouped[0]+"). List each box individually, one per row."]);
+      const nums = list.map(x=>parseInt(x.replace(/\D/g,'')));
+      const sorted = [...nums].sort((a,c)=>a-c);
+      if(JSON.stringify(nums)!==JSON.stringify(sorted)) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": box list is not in ascending order — it will be sorted automatically in the email."]);
+      const asc = list.map(x=>({n:parseInt(x.replace(/\D/g,'')),raw:x})).sort((a,c)=>a.n-c.n);
+      body += "\nBox List ("+asc.length+" boxes, ascending):\n";
+      asc.forEach(x=>{ body += "BOX " + x.raw.replace(/^box\s*/i,'') + "\n"; });
+      const declared = type==='PALLET' ? parseInt(b.boxes||0) : parseInt(b.boxes||0);
+      if(declared && declared !== asc.length) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": No. of Boxes is "+declared+" but the box list has "+asc.length+" rows."]);
+    } else {
+      checks.push(["warn",(b.brand||("Brand "+(i+1)))+": no box list provided."]);
+    }
+
+    const rel = parseList(b.relabel);
+    if(rel.length){ body += "\n*** RELABELING REQUIRED — please note the following box numbers: ***\n"; rel.forEach(x=>body += ">> BOX "+x.replace(/^box\s*/i,'')+"\n"); }
+    const cross = parseList(b.crossBrand);
+    if(cross.length){ body += "\n*** CROSS-BRAND BOXES in this shipment — please note: ***\n"; cross.forEach(x=>body += ">> "+x+"\n"); }
+    if(b.singleOrder.trim()){ body += "\nSingle order (from Jumbo box): " + b.singleOrder.trim() + "\n"; }
+  });
+
+  body += "\n" + "-".repeat(46) + "\n";
+  const attNames = [...attachments.bol, ...attachments.pallet, ...attachments.boxes].map(a=>a.name);
+  body += "Attachments: " + (attNames.length ? attNames.join(", ") : "—") + "\n";
+  body += "\nPlease confirm the pickup schedule.\n\nBest regards,\n" + userName + "\n";
+
+  if(type==='PALLET'){
+    if(!attachments.bol.length) checks.push(["err","BOL is mandatory for pallet shipments — attach it."]);
+    if(!attachments.pallet.length) checks.push(["warn","No pallet labels attached — 4 copies of each pallet label are required."]);
+  } else {
+    checks.push(["warn","Reminder: UPS labels must be sent as ONE label — do not split into FBA + UPS."]);
+  }
+  if(!attachments.boxes.length) checks.push(["warn","No box labels attached — attach them in ascending order (use the stamped PDF from step 1)."]);
+  if(!document.getElementById('toEmails').value.trim()) checks.push(["err","Add at least one recipient email."]);
+  checks.push(["warn","After sending: update the master Excel (Pallet/Boxes – CBM vs Cost)."]);
+
+  const dates = [...new Set(brands.map(b=>fmtDate(b.pickup)).filter(Boolean))];
+  const subject = (type==='PALLET'?"Pallet Shipment":"UPS Shipment") + " – " + (bNames.join(" & ")||"Brand") + (dates.length?(" – Pickup "+dates.join(" / ")):"");
+
+  lastEmail = { subject, body, to: document.getElementById('toEmails').value.trim(), cc: document.getElementById('ccEmails').value.trim() };
+
+  if(show){
+    const cDiv = document.getElementById('emailChecks');
+    cDiv.innerHTML = checks.map(([k,m])=>`<div class="note ${k}">${esc(m)}</div>`).join("") || "<div class='note ok'>All guideline checks passed.</div>";
+    if(!checks.some(c=>c[0]==='err') && checks.length) cDiv.innerHTML = "<div class='note ok'>No blocking issues — review the reminders below.</div>" + cDiv.innerHTML;
+    document.getElementById('emailSheet').innerHTML = '<div class="subj">Subject: '+esc(subject)+'</div>'+esc(body);
+    document.getElementById('emailCard').style.display='block';
+    document.getElementById('emailCard').scrollIntoView({behavior:'smooth'});
+  }
+  return lastEmail;
+}
+
+function copyEmail(){
+  if(!lastEmail) return;
+  navigator.clipboard.writeText("Subject: "+lastEmail.subject+"\n\n"+lastEmail.body)
+    .then(()=>document.getElementById('emailStatus').textContent="Copied.");
+}
+function openMailto(){
+  if(!lastEmail) return;
+  const u = "mailto:"+encodeURIComponent(lastEmail.to)
+    +"?subject="+encodeURIComponent(lastEmail.subject)
+    +(lastEmail.cc?"&cc="+encodeURIComponent(lastEmail.cc):"")
+    +"&body="+encodeURIComponent(lastEmail.body);
+  window.open(u,'_blank');
+  document.getElementById('emailStatus').textContent="Opened in mail app — attach the documents manually there.";
+}
+function downloadEml(){
+  if(!lastEmail) return;
+  const B = "----=_ShipmentConsole_"+Date.now();
+  let eml = "";
+  if(lastEmail.to) eml += "To: "+lastEmail.to+"\r\n";
+  if(lastEmail.cc) eml += "Cc: "+lastEmail.cc+"\r\n";
+  eml += "Subject: "+lastEmail.subject+"\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\n";
+  eml += 'Content-Type: multipart/mixed; boundary="'+B+'"\r\n\r\n';
+  eml += "--"+B+"\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"+lastEmail.body+"\r\n";
+  for(const a of [...attachments.bol, ...attachments.pallet, ...attachments.boxes]){
+    eml += "--"+B+'\r\nContent-Type: '+a.type+'; name="'+a.name+'"\r\n';
+    eml += "Content-Transfer-Encoding: base64\r\n";
+    eml += 'Content-Disposition: attachment; filename="'+a.name+'"\r\n\r\n';
+    eml += a.b64.replace(/(.{76})/g,"$1\r\n")+"\r\n";
+  }
+  eml += "--"+B+"--";
+  const blob = new Blob([eml], {type:'message/rfc822'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = lastEmail.subject.replace(/[^\w\- ]/g,'').slice(0,60)+".eml";
+  link.click();
+  document.getElementById('emailStatus').textContent="Draft downloaded — open it in Outlook, review, and send.";
+}
+
+/* ---------- tab 3: shared log ---------- */
+const LOG_KEY = "shipment-log";
+async function logShipment(){
+  if(!lastEmail) buildEmail(false);
+  const entry = {
+    when: new Date().toISOString(),
+    who: userName,
+    type: shipType,
+    brands: brands.map(b=>({brand:b.brand, fbaId:b.fbaId, pickup:b.pickup,
+      count: shipType==='PALLET' ? (b.pallets+" pallets") : (b.boxes+" boxes"),
+      carrier: shipType==='PALLET' ? b.carrier : "UPS"})),
+    subject: lastEmail ? lastEmail.subject : ""
+  };
+  try{
+    let list = [];
+    try{ const r = await window.storage.get(LOG_KEY, true); if(r) list = JSON.parse(r.value); }catch(e){}
+    list.unshift(entry);
+    await window.storage.set(LOG_KEY, JSON.stringify(list.slice(0,200)), true);
+    document.getElementById('emailStatus').textContent="Saved to the shared shipment log.";
+  }catch(err){
+    document.getElementById('emailStatus').textContent="Could not save to shared log ("+err.message+").";
+  }
+  loadLog();
+}
+async function loadLog(){
+  const el = document.getElementById('logList');
+  let list = [];
+  try{ const r = await window.storage.get(LOG_KEY, true); if(r) list = JSON.parse(r.value); }catch(e){}
+  if(!list.length){ el.innerHTML = '<div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div>'; return; }
+  el.innerHTML = list.map(e=>{
+    const brandLine = (e.brands||[]).map(b=>esc(b.brand||"—")+" · "+esc(b.fbaId||"—")+" · "+esc(b.count||"")+" · pickup "+esc(fmtDate(b.pickup)||"—")+" · "+esc(b.carrier||"")).join("<br>");
+    return '<div class="entry"><div class="top"><b>'+esc(e.subject||e.type)+'</b>'
+      +'<span class="pill '+(e.type==='UPS'?'ok':'warn')+'">'+esc(e.type)+'</span></div>'
+      +'<div class="sub">'+brandLine+'</div>'
+      +'<div class="sub">logged by '+esc(e.who)+' · '+new Date(e.when).toLocaleString()+'</div></div>';
+  }).join("");
+}
+
+function esc(s){ return String(s??"").replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

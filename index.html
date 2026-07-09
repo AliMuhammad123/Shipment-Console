@@ -203,6 +203,9 @@
         </select>
       </div>
       <div style="align-self:end">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;font-weight:400;margin-bottom:8px">
+          <input type="checkbox" id="stripAnnots" checked style="width:auto"> Remove old notes/markup from the PDF (recommended)
+        </label>
         <button class="btn" style="width:100%" onclick="analyzeLabels()">Assign boxes to labels</button>
       </div>
     </div>
@@ -476,12 +479,19 @@ async function stampPdf(){
     const size = parseInt(document.getElementById('stampSize').value);
     const baseline = parseInt(document.getElementById('stampPos').value);
     const pages = doc.getPages();
+    const strip = document.getElementById('stripAnnots').checked;
     for(const a of pageAssignments){
       if(a.seq===null || !(a.seq in mappingReady)) continue;
       const pg = pages[a.page-1];
+      if(strip){
+        /* Old notes/markup (annotations) render ON TOP of the page and can
+           cover the stamp — remove them so the new box number shows cleanly. */
+        try{ pg.node.delete(PDFLib.PDFName.of('Annots')); }catch(e){}
+      }
       const txt = "BOX " + mappingReady[a.seq];
       const w = font.widthOfTextAtSize(txt, size);
-      pg.drawText(txt, { x:(pg.getWidth()-w)/2, y:baseline, size, font, color:rgb(0,0,0) });
+      const mb = pg.getMediaBox();  /* some scans have a shifted page origin */
+      pg.drawText(txt, { x: mb.x + (mb.width - w)/2, y: mb.y + baseline, size, font, color: rgb(0,0,0) });
     }
     const out = await doc.save();
     const blob = new Blob([out], {type:'application/pdf'});

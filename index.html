@@ -173,7 +173,16 @@
         <textarea id="pasteBoxes" rows="5" placeholder="19292&#10;22874&#10;14589"></textarea>
       </div>
     </div>
-    <div class="grid g3" style="margin-top:14px">
+    <div class="grid g2" style="margin-top:14px">
+      <div>
+        <label for="matchMode">How pages map to boxes</label>
+        <select id="matchMode">
+          <option value="fixed2" selected>Sequence — 2 pages per box (1 FBA + 1 UPS), numbers in order</option>
+          <option value="fixed1">Sequence — 1 page per box, numbers in order</option>
+          <option value="auto">Auto — read "Box X of N" text from the PDF</option>
+        </select>
+        <div class="hint">Use Sequence for scanned/image label files. First box number goes on the first page(s), second on the next, and so on.</div>
+      </div>
       <div>
         <label for="stampSize">Stamp size</label>
         <select id="stampSize">
@@ -183,6 +192,8 @@
           <option value="40">Extra large (40 pt)</option>
         </select>
       </div>
+    </div>
+    <div class="grid g3" style="margin-top:14px">
       <div>
         <label for="stampPos">Position from bottom</label>
         <select id="stampPos">
@@ -192,7 +203,7 @@
         </select>
       </div>
       <div style="align-self:end">
-        <button class="btn" style="width:100%" onclick="analyzeLabels()">Match boxes to labels</button>
+        <button class="btn" style="width:100%" onclick="analyzeLabels()">Assign boxes to labels</button>
       </div>
     </div>
   </div>
@@ -278,8 +289,8 @@
 <!-- ================= TAB 3: LOG ================= -->
 <section class="tab" id="tab-log">
   <div class="card">
-    <h2>Shipment log <span class="step">visible to everyone using this app</span></h2>
-    <div class="hint" style="margin-bottom:12px">Every saved shipment is recorded here with the sender's name so the team can view the process. Remember: also update the master Excel file (Pallet/Boxes – CBM vs Cost) for every shipment, even a single Jumbo box.</div>
+    <h2>Shipment log <span class="step">record of sent shipments</span></h2>
+    <div class="hint" style="margin-bottom:12px">Every saved shipment is recorded here with the sender's name so the process can be reviewed. On a hosted website the log is saved per device/browser. Remember: also update the master Excel file (Pallet/Boxes – CBM vs Cost) for every shipment, even a single Jumbo box.</div>
     <div class="loglist" id="logList"><div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div></div>
   </div>
 </section>
@@ -401,29 +412,48 @@ async function analyzeLabels(){
   const notes = document.getElementById('matchNotes'); notes.innerHTML = "<div class='hint'>Reading PDF pages…</div>";
   document.getElementById('matchCard').style.display='block';
 
+  const mode = document.getElementById('matchMode').value;
   const doc = await pdfjsLib.getDocument({data: pdfBytes.slice()}).promise;
-  const rx = /Box\s+(\d+)\s+of\s+(\d+)/i;
-  let current = null; pageAssignments = [];
-  for(let p=1;p<=doc.numPages;p++){
-    const page = await doc.getPage(p);
-    const tc = await page.getTextContent();
-    const text = tc.items.map(i=>i.str).join(" ");
-    const m = text.match(rx);
-    if(m) current = parseInt(m[1]);
-    pageAssignments.push({page:p, seq:current});
+  let html = ""; let ok = true;
+  pageAssignments = [];
+
+  if(mode === 'auto'){
+    const rx = /Box\s+(\d+)\s+of\s+(\d+)/i;
+    let current = null;
+    for(let p=1;p<=doc.numPages;p++){
+      const page = await doc.getPage(p);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(i=>i.str).join(" ");
+      const m = text.match(rx);
+      if(m) current = parseInt(m[1]);
+      pageAssignments.push({page:p, seq:current});
+    }
+  } else {
+    const per = mode === 'fixed1' ? 1 : 2;
+    for(let p=1;p<=doc.numPages;p++){
+      pageAssignments.push({page:p, seq: Math.floor((p-1)/per)+1});
+    }
+    if(doc.numPages % per !== 0){
+      html += "<div class='note warn'>This PDF has "+doc.numPages+" pages, which is not a multiple of "+per+". Check that every box really has "+per+" label page(s).</div>";
+    }
+    const expected = Math.ceil(doc.numPages/per);
+    const provided = Object.keys(mapping).length;
+    if(provided !== expected){
+      ok = false;
+      html += "<div class='note err'>The PDF has "+expected+" boxes ("+doc.numPages+" pages ÷ "+per+") but you provided "+provided+" box number(s). Make them match, then try again.</div>";
+    }
   }
 
   const seqs = [...new Set(pageAssignments.filter(a=>a.seq!==null).map(a=>a.seq))].sort((a,b)=>a-b);
-  let html = ""; let ok = true;
-  if(!seqs.length){
+  if(mode === 'auto' && !seqs.length){
     ok = false;
-    html += "<div class='note err'>No \"Box X of N\" text found in this PDF — it may be scanned images only. Send it to Claude in chat instead, or check the file.</div>";
+    html += "<div class='note err'>No \"Box X of N\" text found in this PDF — it is probably a scanned/image file. Switch the mapping mode to <b>Sequence</b> and try again.</div>";
   }
   const missing = seqs.filter(s=>!(s in mapping));
   if(missing.length){ ok=false; html += "<div class='note err'>Sheet has no carton number for box(es): "+missing.join(", ")+".</div>"; }
   const extra = Object.keys(mapping).map(Number).filter(s=>!seqs.includes(s));
   if(extra.length){ html += "<div class='note warn'>Rows for box(es) "+extra.join(", ")+" have no matching box in the PDF — they will be ignored.</div>"; }
-  if(ok){ html += "<div class='note ok'>"+seqs.length+" boxes detected across "+doc.numPages+" pages. Review the mapping, then stamp.</div>"; }
+  if(ok){ html += "<div class='note ok'>"+seqs.length+" boxes across "+doc.numPages+" pages. First number → first box. Review, then stamp.</div>"; }
   notes.innerHTML = html;
 
   let t = "<tr><th>Box</th><th>Stamp text</th><th>Pages</th></tr>";
@@ -667,6 +697,22 @@ function downloadEml(){
 
 /* ---------- tab 3: shared log ---------- */
 const LOG_KEY = "shipment-log";
+/* Storage adapter: uses Claude's shared storage when available,
+   otherwise the browser's localStorage (per-device on GitHub Pages). */
+const store = {
+  async get(key){
+    if(window.storage && window.storage.get){
+      try{ const r = await window.storage.get(key, true); return r ? r.value : null; }catch(e){ return null; }
+    }
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  },
+  async set(key, value){
+    if(window.storage && window.storage.set){
+      try{ await window.storage.set(key, value, true); return true; }catch(e){}
+    }
+    try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+  }
+};
 async function logShipment(){
   if(!lastEmail) buildEmail(false);
   const entry = {
@@ -678,21 +724,21 @@ async function logShipment(){
       carrier: shipType==='PALLET' ? b.carrier : "UPS"})),
     subject: lastEmail ? lastEmail.subject : ""
   };
-  try{
-    let list = [];
-    try{ const r = await window.storage.get(LOG_KEY, true); if(r) list = JSON.parse(r.value); }catch(e){}
-    list.unshift(entry);
-    await window.storage.set(LOG_KEY, JSON.stringify(list.slice(0,200)), true);
-    document.getElementById('emailStatus').textContent="Saved to the shared shipment log.";
-  }catch(err){
-    document.getElementById('emailStatus').textContent="Could not save to shared log ("+err.message+").";
-  }
+  let list = [];
+  const raw = await store.get(LOG_KEY);
+  if(raw){ try{ list = JSON.parse(raw); }catch(e){} }
+  list.unshift(entry);
+  const ok = await store.set(LOG_KEY, JSON.stringify(list.slice(0,200)));
+  document.getElementById('emailStatus').textContent = ok
+    ? "Saved to the shipment log."
+    : "Could not save the log on this device.";
   loadLog();
 }
 async function loadLog(){
   const el = document.getElementById('logList');
   let list = [];
-  try{ const r = await window.storage.get(LOG_KEY, true); if(r) list = JSON.parse(r.value); }catch(e){}
+  const raw = await store.get(LOG_KEY);
+  if(raw){ try{ list = JSON.parse(raw); }catch(e){} }
   if(!list.length){ el.innerHTML = '<div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div>'; return; }
   el.innerHTML = list.map(e=>{
     const brandLine = (e.brands||[]).map(b=>esc(b.brand||"—")+" · "+esc(b.fbaId||"—")+" · "+esc(b.count||"")+" · pickup "+esc(fmtDate(b.pickup)||"—")+" · "+esc(b.carrier||"")).join("<br>");

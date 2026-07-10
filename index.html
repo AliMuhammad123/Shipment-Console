@@ -9,111 +9,159 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --ink:#181B1F; --ink2:#4A4F57; --paper:#F2F1ED; --panel:#FFFFFF;
-    --line:#D8D5CC; --line2:#B9B5A9; --accent:#A34808; --accent-soft:#F6E7DA;
-    --ok:#1E6E46; --ok-soft:#E2F0E8; --warn:#8A5A00; --warn-soft:#FBF0D7;
-    --err:#9C2B24; --err-soft:#F8E5E3;
+    --ink:#14181D; --ink2:#3E444D; --mut:#6B7280;
+    --paper:#F4F1EA; --panel:#FFFFFF; --panel2:#FBFAF6;
+    --line:#E4E0D5; --line2:#C9C4B5;
+    --accent:#C2540A; --accent2:#E8720F; --accent-soft:#FBEDE0; --accent-ink:#8F3D05;
+    --ok:#1E7A4C; --ok-soft:#E3F2E9; --warn:#946000; --warn-soft:#FCF3DC;
+    --err:#B03227; --err-soft:#FAE8E6;
     --mono:ui-monospace,"SF Mono","Cascadia Mono","Courier New",monospace;
-    --sans:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif;
+    --sans:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(20,24,29,.06),0 8px 24px -12px rgba(20,24,29,.18);
+    --shadow-lg:0 2px 4px rgba(20,24,29,.08),0 20px 44px -16px rgba(20,24,29,.28);
+    --r:12px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+    background-image:radial-gradient(circle at 15% 0%, rgba(194,84,10,.05), transparent 40%)}
   button{font-family:var(--sans);cursor:pointer}
   input,select,textarea{font-family:var(--sans);font-size:14px;color:var(--ink);
-    border:1px solid var(--line2);border-radius:4px;padding:8px 10px;background:#fff;width:100%}
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+    border:1.5px solid var(--line2);border-radius:8px;padding:9px 12px;background:#fff;width:100%;
+    transition:border-color .15s, box-shadow .15s}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(194,84,10,.15)}
   textarea{font-family:var(--mono);font-size:13px}
-  label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:5px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);margin-bottom:6px}
 
-  /* label-style masthead: heavy rule like an FBA label header */
-  header{background:var(--panel);border-bottom:4px solid var(--ink);padding:14px 22px;
-    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
-  header .brand{font-weight:900;font-size:22px;letter-spacing:.02em}
-  header .brand span{color:var(--accent)}
-  header .meta{font-family:var(--mono);font-size:12px;color:var(--ink2)}
+  /* ============ header ============ */
+  header{background:linear-gradient(120deg,#14181D 0%,#1D242C 70%,#232B34 100%);color:#fff;
+    border-bottom:3px solid var(--accent);padding:16px 26px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .mark{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--accent2),var(--accent));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px -3px rgba(232,114,15,.5)}
+  .logo .mark svg{width:22px;height:22px;fill:#fff}
+  .logo b{font-size:19px;font-weight:900;letter-spacing:.03em}
+  .logo b span{color:var(--accent2)}
+  .logo small{display:block;font-size:11px;color:#9AA3AE;font-weight:400;letter-spacing:.06em;margin-top:1px}
+  .userchip{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:99px;padding:6px 14px 6px 7px;font-size:13px}
+  .userchip .avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:12px;color:#fff}
+  .userchip .date{color:#9AA3AE;font-family:var(--mono);font-size:11px;margin-left:4px}
 
-  nav{display:flex;gap:0;background:var(--panel);border-bottom:1px solid var(--line);padding:0 22px;overflow-x:auto}
-  nav button{background:none;border:none;border-bottom:3px solid transparent;padding:12px 16px;
-    font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap}
-  nav button.active{color:var(--ink);border-bottom-color:var(--accent)}
-  nav button:hover{color:var(--ink)}
+  /* ============ nav ============ */
+  nav{position:sticky;top:0;z-index:20;background:rgba(244,241,234,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 26px;display:flex;gap:8px;overflow-x:auto}
+  nav button{display:flex;align-items:center;gap:8px;border:1.5px solid transparent;background:transparent;color:var(--ink2);
+    border-radius:99px;padding:8px 16px;font-size:13px;font-weight:700;letter-spacing:.02em;white-space:nowrap;transition:all .15s}
+  nav button svg{width:15px;height:15px;fill:currentColor;opacity:.75}
+  nav button:hover{background:#fff;border-color:var(--line)}
+  nav button.active{background:var(--ink);color:#fff;box-shadow:var(--shadow)}
+  nav button.active svg{opacity:1}
 
-  main{max-width:1060px;margin:0 auto;padding:26px 22px 80px}
-  .tab{display:none}.tab.active{display:block}
+  main{max-width:1080px;margin:0 auto;padding:28px 24px 90px}
+  .tab{display:none;animation:fade .25s ease}
+  .tab.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;margin-bottom:18px}
-  .card h2{font-size:15px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-    border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-  .card h2 .step{font-family:var(--mono);font-size:11px;color:var(--ink2);font-weight:400;text-transform:none;letter-spacing:0}
+  /* ============ cards ============ */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .card h2{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:18px}
+  .card h2 .num{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;box-shadow:0 3px 8px -2px rgba(194,84,10,.5)}
+  .card h2 .step{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400;text-transform:none;letter-spacing:0}
   .grid{display:grid;gap:14px}
   .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
-  @media(max-width:720px){.g2,.g3{grid-template-columns:1fr}}
-  .hint{font-size:12.5px;color:var(--ink2);margin-top:5px}
+  @media(max-width:740px){.g2,.g3{grid-template-columns:1fr}}
+  .hint{font-size:12.5px;color:var(--mut);margin-top:6px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
-  .btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:4px;
-    padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-  .btn:hover{background:#000}
-  .btn.alt{background:#fff;color:var(--ink)}
-  .btn.alt:hover{background:var(--paper)}
-  .btn.accent{background:var(--accent);border-color:var(--accent)}
-  .btn.accent:hover{background:#8A3C06}
-  .btn:disabled{opacity:.45;cursor:not-allowed}
-  .btn.sm{padding:6px 12px;font-size:11.5px}
+  /* ============ buttons ============ */
+  .btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:9px;padding:11px 20px;
+    font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;transition:all .15s;
+    background:var(--ink);color:#fff;box-shadow:var(--shadow)}
+  .btn svg{width:15px;height:15px;fill:currentColor}
+  .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+  .btn:active{transform:none}
+  .btn.accent{background:linear-gradient(135deg,var(--accent2),var(--accent))}
+  .btn.alt{background:#fff;color:var(--ink);border:1.5px solid var(--line2);box-shadow:none}
+  .btn.alt:hover{border-color:var(--ink)}
+  .btn.gmail{background:#fff;color:#3c4043;border:1.5px solid var(--line2);box-shadow:none}
+  .btn.gmail:hover{border-color:#4285F4;box-shadow:0 0 0 3px rgba(66,133,244,.15)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .btn.sm{padding:7px 13px;font-size:11.5px}
 
-  .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--line2)}
-  .pill.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
-  .pill.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
-  .pill.err{background:var(--err-soft);color:var(--err);border-color:var(--err)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:99px;font-weight:700}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .pill.warn{background:var(--warn-soft);color:var(--warn)}
 
-  .note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 4px 4px 0;font-size:13px;margin:10px 0}
-  .note.ok{border-color:var(--ok);background:var(--ok-soft)}
-  .note.warn{border-color:var(--warn);background:var(--warn-soft)}
-  .note.err{border-color:var(--err);background:var(--err-soft)}
+  .note{display:flex;gap:10px;align-items:flex-start;border-radius:9px;padding:11px 14px;font-size:13px;margin:8px 0;border:1px solid}
+  .note::before{content:"";width:16px;height:16px;border-radius:50%;flex-shrink:0;margin-top:1px;background-position:center;background-repeat:no-repeat}
+  .note.ok{background:var(--ok-soft);border-color:#BFDECC;color:#14532D}
+  .note.ok::before{background-color:var(--ok);background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>');background-size:11px}
+  .note.warn{background:var(--warn-soft);border-color:#EBD9A8;color:#6B4A00}
+  .note.warn::before{background-color:var(--warn);background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M11 7h2v6h-2zm0 8h2v2h-2z"/></svg>');background-size:12px}
+  .note.err{background:var(--err-soft);border-color:#EFC2BD;color:#7A211A}
+  .note.err::before{background-color:var(--err);background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>');background-size:10px}
 
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
-    border-bottom:2px solid var(--ink);padding:6px 8px}
-  td{border-bottom:1px solid var(--line);padding:7px 8px;font-family:var(--mono);font-size:12.5px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);border-bottom:2px solid var(--ink);padding:8px 10px}
+  td{border-bottom:1px solid var(--line);padding:9px 10px;font-family:var(--mono);font-size:12.5px}
+  tr:hover td{background:var(--panel2)}
 
-  /* file drop */
-  .drop{border:1.5px dashed var(--line2);border-radius:6px;padding:16px;text-align:center;color:var(--ink2);
-    font-size:13px;background:#FBFAF8;cursor:pointer}
-  .drop.has{border-style:solid;border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+  /* ============ drop zones ============ */
+  .drop{border:2px dashed var(--line2);border-radius:10px;padding:20px 16px;text-align:center;color:var(--mut);
+    font-size:13px;background:var(--panel2);cursor:pointer;transition:all .15s;position:relative}
+  .drop:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .drop .ic{width:30px;height:30px;margin:0 auto 8px;border-radius:8px;background:#fff;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center}
+  .drop .ic svg{width:16px;height:16px;fill:var(--accent)}
+  .drop.has{border-style:solid;border-color:var(--ok);color:#14532D;background:var(--ok-soft)}
+  .drop.has .ic{border-color:var(--ok)}
+  .drop.has .ic svg{fill:var(--ok)}
   .drop input{display:none}
-  .drop .fname{font-family:var(--mono);font-weight:700;word-break:break-all}
+  .drop .fname{font-family:var(--mono);font-weight:700;word-break:break-all;font-size:12px}
 
-  /* the signature element: email preview rendered as a paper document */
-  .sheet{background:#fff;border:1px solid var(--line2);border-top:5px solid var(--ink);
-    box-shadow:0 2px 0 var(--line);padding:22px 26px;font-family:var(--mono);font-size:12.5px;
-    white-space:pre-wrap;word-break:break-word;max-height:520px;overflow:auto}
-  .sheet .subj{font-family:var(--sans);font-weight:800;font-size:14px;border-bottom:1px solid var(--line);
-    padding-bottom:8px;margin-bottom:10px;white-space:normal}
+  /* ============ email sheet ============ */
+  .sheet{background:#fff;border:1px solid var(--line2);border-radius:10px;box-shadow:var(--shadow-lg);
+    padding:0;font-family:var(--mono);font-size:12.5px;max-height:540px;overflow:auto}
+  .sheet .subj{position:sticky;top:0;font-family:var(--sans);font-weight:800;font-size:14px;
+    background:linear-gradient(120deg,#14181D,#232B34);color:#fff;padding:14px 22px;border-radius:10px 10px 0 0}
+  .sheet .subj small{display:block;font-weight:400;font-size:11px;color:#9AA3AE;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+  .sheet .bodytxt{padding:20px 24px;white-space:pre-wrap;word-break:break-word}
 
-  /* brand blocks */
-  .brandblock{border:1px solid var(--line2);border-left:4px solid var(--accent);border-radius:4px;padding:16px;margin-bottom:14px;background:#FDFCFA}
-  .brandblock .bhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-  .brandblock .bhead b{font-size:13px;letter-spacing:.05em;text-transform:uppercase}
-  .seg{display:inline-flex;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
-  .seg button{border:none;background:#fff;padding:8px 16px;font-size:12.5px;font-weight:700;letter-spacing:.03em}
-  .seg button.on{background:var(--ink);color:#fff}
+  /* ============ brand blocks ============ */
+  .brandblock{border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;background:var(--panel2);
+    border-left:4px solid var(--accent);box-shadow:var(--shadow)}
+  .brandblock .bhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .brandblock .bhead b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .brandblock .bhead b::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .seg{display:inline-flex;background:#fff;border:1.5px solid var(--line2);border-radius:99px;padding:4px;gap:4px}
+  .seg button{border:none;background:transparent;border-radius:99px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--ink2);transition:all .15s}
+  .seg button.on{background:var(--ink);color:#fff;box-shadow:var(--shadow)}
 
-  /* gate */
-  #gate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50}
-  #gate .box{background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--ink);
-    border-radius:6px;padding:34px;width:min(420px,92vw)}
-  #gate h1{font-size:20px;font-weight:900;margin-bottom:4px}
+  /* ============ gate ============ */
+  #gate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#14181D 0%,#1D242C 55%,#2A241C 100%)}
+  #gate::before{content:"";position:absolute;inset:0;opacity:.35;
+    background:radial-gradient(circle at 78% 22%, rgba(232,114,15,.35), transparent 45%)}
+  #gate .box{position:relative;background:var(--panel);border-radius:16px;padding:38px;width:min(430px,92vw);box-shadow:var(--shadow-lg)}
+  #gate .glogo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  #gate .glogo .mark{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,var(--accent2),var(--accent));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -4px rgba(232,114,15,.55)}
+  #gate .glogo .mark svg{width:26px;height:26px;fill:#fff}
+  #gate h1{font-size:22px;font-weight:900}
   #gate h1 span{color:var(--accent)}
-  #gate p{font-size:13px;color:var(--ink2);margin-bottom:18px}
+  #gate p{font-size:13px;color:var(--mut);margin:10px 0 20px}
 
-  .loglist .entry{border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin-bottom:10px;background:#fff}
-  .loglist .entry .top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13px}
-  .loglist .entry .top b{letter-spacing:.02em}
-  .loglist .entry .sub{font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-top:4px}
-  .empty{text-align:center;color:var(--ink2);font-size:13px;padding:30px;border:1.5px dashed var(--line2);border-radius:6px}
+  .loglist .entry{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff;
+    box-shadow:var(--shadow);transition:transform .15s}
+  .loglist .entry:hover{transform:translateX(3px)}
+  .loglist .entry .top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:13.5px;align-items:center}
+  .loglist .entry .sub{font-family:var(--mono);font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.7}
+  .empty{text-align:center;color:var(--mut);font-size:13px;padding:36px;border:2px dashed var(--line2);border-radius:10px;background:var(--panel2)}
 
-  footer{max-width:1060px;margin:0 auto;padding:0 22px 30px;font-size:11.5px;color:var(--ink2);font-family:var(--mono)}
-  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  footer{max-width:1080px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;color:var(--mut);font-family:var(--mono)}
   @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -122,27 +170,41 @@
 <!-- ================= ACCESS GATE ================= -->
 <div id="gate">
   <div class="box">
-    <h1>Shipment <span>Console</span></h1>
+    <div class="glogo">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M21 8.4 12 3 3 8.4v7.2L12 21l9-5.4V8.4zM12 5.3l6.1 3.6L12 12.6 5.9 8.9 12 5.3zM5 10.6l6 3.7v4.6l-6-3.6v-4.7zm8 8.3v-4.6l6-3.7v4.7l-6 3.6z"/></svg></div>
+      <h1>Shipment <span>Console</span></h1>
+    </div>
     <p>Team access only. Enter the access code and your name to continue. Your name is recorded in the shipment log.</p>
     <div class="grid" style="gap:12px">
       <div><label for="gateCode">Access code</label><input type="password" id="gateCode" autocomplete="off"></div>
       <div><label for="gateName">Your name</label><input type="text" id="gateName" placeholder="e.g. Sania"></div>
       <div id="gateErr" class="note err" style="display:none">Incorrect access code. Check with your team lead.</div>
-      <button class="btn accent" onclick="unlock()">Enter console</button>
+      <button class="btn accent" style="justify-content:center" onclick="unlock()">Enter console</button>
     </div>
   </div>
 </div>
 
 <header style="display:none" id="appHeader">
-  <div class="brand">SHIPMENT <span>CONSOLE</span></div>
-  <div class="meta" id="userMeta"></div>
+  <div class="logo">
+    <div class="mark"><svg viewBox="0 0 24 24"><path d="M21 8.4 12 3 3 8.4v7.2L12 21l9-5.4V8.4zM12 5.3l6.1 3.6L12 12.6 5.9 8.9 12 5.3zM5 10.6l6 3.7v4.6l-6-3.6v-4.7zm8 8.3v-4.6l6-3.7v4.7l-6 3.6z"/></svg></div>
+    <div><b>SHIPMENT <span>CONSOLE</span></b><small>BOX LABELS · WAREHOUSE EMAILS · LOG</small></div>
+  </div>
+  <div class="userchip"><div class="avatar" id="avatarLetter">S</div><span id="userMeta"></span><span class="date" id="dateMeta"></span></div>
 </header>
 
 <nav style="display:none" id="appNav">
-  <button class="active" data-tab="labels" onclick="showTab('labels')">1 · Box Labels</button>
-  <button data-tab="email" onclick="showTab('email')">2 · Shipment Email</button>
-  <button data-tab="log" onclick="showTab('log')">3 · Shipment Log</button>
-  <button data-tab="help" onclick="showTab('help')">Guidelines</button>
+  <button class="active" data-tab="labels" onclick="showTab('labels')">
+    <svg viewBox="0 0 24 24"><path d="M17.6 3H6.4A3.4 3.4 0 0 0 3 6.4v11.2A3.4 3.4 0 0 0 6.4 21h11.2a3.4 3.4 0 0 0 3.4-3.4V6.4A3.4 3.4 0 0 0 17.6 3zM7 7h6v2H7V7zm10 10H7v-2h10v2zm0-4H7v-2h10v2z"/></svg>
+    Box Labels</button>
+  <button data-tab="email" onclick="showTab('email')">
+    <svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+    Shipment Email</button>
+  <button data-tab="log" onclick="showTab('log')">
+    <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.9 10h-2A7 7 0 1 1 13 5v3l4-4-4-4v3zm-1 5v5l4.2 2.5.8-1.3-3.5-2.1V8H12z"/></svg>
+    Shipment Log</button>
+  <button data-tab="help" onclick="showTab('help')">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.1-7.7-.9.9c-.7.7-1.2 1.3-1.2 2.8h-2v-.5c0-1.1.5-2.1 1.2-2.8l1.2-1.3a2 2 0 1 0-3.4-1.4h-2a4 4 0 1 1 7.1 2.3z"/></svg>
+    Guidelines</button>
 </nav>
 
 <main style="display:none" id="appMain">
@@ -150,21 +212,23 @@
 <!-- ================= TAB 1: LABEL STAMPER ================= -->
 <section class="tab active" id="tab-labels">
   <div class="card">
-    <h2>Upload label PDF <span class="step">FBA + UPS labels, one file</span></h2>
+    <h2><span class="num">1</span> Upload label PDF <span class="step">FBA + UPS labels, one file</span></h2>
     <div class="drop" id="dropPdf" onclick="document.getElementById('pdfInput').click()">
       <input type="file" id="pdfInput" accept="application/pdf">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></div>
       <div id="dropPdfText">Click to choose the labels PDF (e.g. FBA &amp; UPS Labels – ET Small Items)</div>
     </div>
     <div class="hint" id="pdfInfo"></div>
   </div>
 
   <div class="card">
-    <h2>Box numbers <span class="step">Excel sheet or paste</span></h2>
+    <h2><span class="num">2</span> Box numbers <span class="step">Excel sheet or paste</span></h2>
     <div class="grid g2">
       <div>
         <label>Option A — Excel / CSV sheet</label>
         <div class="drop" id="dropXls" onclick="document.getElementById('xlsInput').click()">
           <input type="file" id="xlsInput" accept=".xlsx,.xlsm,.csv">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-8 14H7v-2h4v2zm0-4H7v-2h4v2zm6 4h-4v-2h4v2zm0-4h-4v-2h4v2zm0-4H7V7h10v2z"/></svg></div>
           <div id="dropXlsText">Sheet with a <b>Carton No</b> column (optional <b>Box No</b> column for explicit order)</div>
         </div>
       </div>
@@ -203,20 +267,24 @@
         </select>
       </div>
       <div style="align-self:end">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;font-weight:400;margin-bottom:8px">
-          <input type="checkbox" id="stripAnnots" checked style="width:auto"> Remove old notes/markup from the PDF (recommended)
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:12.5px;letter-spacing:0;font-weight:400;margin-bottom:0">
+          <input type="checkbox" id="stripAnnots" checked style="width:auto"> Remove old notes/markup (recommended)
         </label>
-        <button class="btn" style="width:100%" onclick="analyzeLabels()">Assign boxes to labels</button>
+      </div>
+      <div style="align-self:end">
+        <button class="btn" style="width:100%;justify-content:center" onclick="analyzeLabels()">Assign boxes to labels</button>
       </div>
     </div>
   </div>
 
   <div class="card" id="matchCard" style="display:none">
-    <h2>Review mapping <span class="step">check before stamping</span></h2>
+    <h2><span class="num">3</span> Review mapping <span class="step">check before stamping</span></h2>
     <div id="matchNotes"></div>
     <div style="overflow-x:auto"><table id="matchTable"></table></div>
     <div class="row" style="margin-top:16px">
-      <button class="btn accent" id="stampBtn" onclick="stampPdf()">Stamp &amp; download PDF</button>
+      <button class="btn accent" id="stampBtn" onclick="stampPdf()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Stamp &amp; download PDF</button>
       <span id="stampStatus" class="hint"></span>
     </div>
   </div>
@@ -225,7 +293,7 @@
 <!-- ================= TAB 2: SHIPMENT EMAIL ================= -->
 <section class="tab" id="tab-email">
   <div class="card">
-    <h2>Shipment type <span class="step">select and proceed</span></h2>
+    <h2><span class="num">1</span> Shipment type <span class="step">select and proceed</span></h2>
     <div class="seg" role="radiogroup" aria-label="Shipment type">
       <button id="segUPS" class="on" onclick="setShipType('UPS')">UPS Boxes</button>
       <button id="segPAL" onclick="setShipType('PALLET')">Pallet</button>
@@ -234,89 +302,102 @@
   </div>
 
   <div class="card">
-    <h2>Brand-wise details <span class="step">add each brand in this shipment</span></h2>
+    <h2><span class="num">2</span> Brand-wise details <span class="step">add each brand in this shipment</span></h2>
     <div id="brandBlocks"></div>
     <button class="btn alt sm" onclick="addBrand()">+ Add another brand</button>
   </div>
 
   <div class="card">
-    <h2>Attachments <span class="step">embedded into the .eml draft</span></h2>
+    <h2><span class="num">3</span> Attachments <span class="step">embedded into the .eml draft</span></h2>
     <div class="grid g3">
       <div>
-        <label>Bill of Lading (BOL) <span id="bolReq" style="color:var(--err)">— mandatory for pallet</span></label>
+        <label>Bill of Lading (BOL) <span id="bolReq" style="color:var(--err);display:none">— mandatory for pallet</span></label>
         <div class="drop" onclick="document.getElementById('attBOL').click()" id="dropBOL">
-          <input type="file" id="attBOL" accept="application/pdf,image/*"><div id="dropBOLText">Attach BOL</div>
+          <input type="file" id="attBOL" accept="application/pdf,image/*">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div>
+          <div id="dropBOLText">Attach BOL</div>
         </div>
       </div>
       <div>
-        <label>Pallet labels <span style="color:var(--ink2);text-transform:none">(4 copies of each)</span></label>
+        <label>Pallet labels <span style="color:var(--mut);text-transform:none">(4 copies of each)</span></label>
         <div class="drop" onclick="document.getElementById('attPallet').click()" id="dropPallet">
-          <input type="file" id="attPallet" accept="application/pdf" multiple><div id="dropPalletText">Attach pallet labels</div>
+          <input type="file" id="attPallet" accept="application/pdf" multiple>
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg></div>
+          <div id="dropPalletText">Attach pallet labels</div>
         </div>
       </div>
       <div>
-        <label>Box labels <span style="color:var(--ink2);text-transform:none">(ascending order)</span></label>
+        <label>Box labels <span style="color:var(--mut);text-transform:none">(ascending order)</span></label>
         <div class="drop" onclick="document.getElementById('attBoxes').click()" id="dropBoxes">
-          <input type="file" id="attBoxes" accept="application/pdf" multiple><div id="dropBoxesText">Attach box labels (use the stamped PDF from step 1)</div>
+          <input type="file" id="attBoxes" accept="application/pdf" multiple>
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 8.4 12 3 3 8.4v7.2L12 21l9-5.4V8.4zM12 5.3l6.1 3.6L12 12.6 5.9 8.9 12 5.3z"/></svg></div>
+          <div id="dropBoxesText">Attach box labels (use the stamped PDF from step 1)</div>
         </div>
       </div>
     </div>
-    <div class="hint">Tip: mail apps can't receive attachments through "Open in mail app". Download the <b>.eml draft</b> instead — it opens in Outlook with everything attached.</div>
+    <div class="hint">Gmail and mail apps can't receive attachments through a link — add them in the compose window, or use the <b>.eml draft</b> which opens in Outlook with everything already attached.</div>
   </div>
 
   <div class="card">
-    <h2>Recipients <span class="step">USA warehouse team</span></h2>
+    <h2><span class="num">4</span> Recipients <span class="step">USA warehouse team</span></h2>
     <div class="grid g2">
       <div><label for="toEmails">To (comma-separated)</label><input id="toEmails" placeholder="warehouse@company.com"></div>
       <div><label for="ccEmails">Cc (optional)</label><input id="ccEmails" placeholder="ops@company.com"></div>
     </div>
     <div class="row" style="margin-top:16px">
-      <button class="btn accent" onclick="buildEmail(true)">Generate email</button>
+      <button class="btn accent" onclick="buildEmail(true)">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        Generate email</button>
     </div>
   </div>
 
   <div class="card" id="emailCard" style="display:none">
-    <h2>Email preview <span class="step">guideline checks below</span></h2>
+    <h2><span class="num">5</span> Email preview <span class="step">guideline checks below</span></h2>
     <div id="emailChecks"></div>
-    <div class="sheet" id="emailSheet"></div>
-    <div class="row" style="margin-top:16px">
-      <button class="btn" onclick="downloadEml()">Download .eml draft (with attachments)</button>
-      <button class="btn alt" onclick="openMailto()">Open in mail app</button>
-      <button class="btn alt" onclick="copyEmail()">Copy email text</button>
-      <button class="btn alt" onclick="logShipment()">Save to shipment log</button>
-      <span class="hint" id="emailStatus"></span>
+    <div class="sheet"><div class="subj" id="emailSubj"></div><div class="bodytxt" id="emailBody"></div></div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn gmail" onclick="openGmail()">
+        <svg viewBox="0 0 24 24"><path fill="#EA4335" d="M5.3 18.7H3.5A1.5 1.5 0 0 1 2 17.2V7.4l3.3 2.5v8.8z"/><path fill="#4285F4" d="M18.7 18.7h1.8a1.5 1.5 0 0 0 1.5-1.5V7.4l-3.3 2.5v8.8z"/><path fill="#FBBC04" d="M2 7.4V6.2c0-1.2 1.4-1.9 2.4-1.2L5.3 6l6.7 5 6.7-5 .9-1c1-.7 2.4 0 2.4 1.2v1.2L12 14.9 2 7.4z"/><path fill="#34A853" d="m5.3 6 6.7 5 6.7-5v3.9L12 14.9 5.3 9.9V6z"/></svg>
+        Open in Gmail</button>
+      <button class="btn" onclick="downloadEml()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        .eml draft (with attachments)</button>
+      <button class="btn alt" onclick="openMailto()">Mail app</button>
+      <button class="btn alt" onclick="copyEmail()">Copy text</button>
+      <button class="btn alt" onclick="logShipment()">Save to log</button>
     </div>
+    <div class="hint" id="emailStatus" style="margin-top:10px"></div>
   </div>
 </section>
 
 <!-- ================= TAB 3: LOG ================= -->
 <section class="tab" id="tab-log">
   <div class="card">
-    <h2>Shipment log <span class="step">record of sent shipments</span></h2>
-    <div class="hint" style="margin-bottom:12px">Every saved shipment is recorded here with the sender's name so the process can be reviewed. On a hosted website the log is saved per device/browser. Remember: also update the master Excel file (Pallet/Boxes – CBM vs Cost) for every shipment, even a single Jumbo box.</div>
-    <div class="loglist" id="logList"><div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div></div>
+    <h2><span class="num">✓</span> Shipment log <span class="step">record of sent shipments</span></h2>
+    <div class="hint" style="margin-bottom:14px">Every saved shipment is recorded here with the sender's name so the process can be reviewed. On a hosted website the log is saved per device/browser. Remember: also update the master Excel file (Pallet/Boxes – CBM vs Cost) for every shipment, even a single Jumbo box.</div>
+    <div class="loglist" id="logList"><div class="empty">No shipments logged yet. Generate an email and press "Save to log".</div></div>
   </div>
 </section>
 
 <!-- ================= TAB 4: GUIDELINES ================= -->
 <section class="tab" id="tab-help">
   <div class="card">
-    <h2>Shipping &amp; documentation guidelines</h2>
-    <div style="font-size:13.5px;line-height:1.7">
+    <h2><span class="num">?</span> Shipping &amp; documentation guidelines</h2>
+    <div style="font-size:13.5px;line-height:1.75">
       <p><b>Required email details (in the body, explicitly):</b> Brand · FBA ID · Pickup Date · No. of Pallets / No. of Boxes · Carrier.</p>
-      <p style="margin-top:8px"><b>Mandatory attachments:</b> Bill of Lading (BOL); pallet labels — 4 copies of each individual pallet label; box labels — organized and attached in ascending order.</p>
-      <p style="margin-top:8px"><b>Box list format:</b> list each box individually, in ascending order, one per row. Never group multiple box numbers into a single row.</p>
-      <p style="margin-top:8px"><b>Highlights:</b> boxes needing relabeling must be highlighted in the email body (even if updated labels were sent separately). Cross-brand boxes mixed into the shipment must also be highlighted.</p>
-      <p style="margin-top:8px"><b>UPS shipments:</b> send UPS labels as one label (do not break into FBA + UPS); share the total weight (required to schedule pickup); coordinate across brands so all UPS boxes pick up on one day.</p>
-      <p style="margin-top:8px"><b>Single orders from a Jumbo box:</b> mention Brand, Box #, Item, FNSKU, and Carrier (UPS/FedEx/USPS). Use the "Single order" note field in the brand block.</p>
-      <p style="margin-top:8px"><b>Tracking:</b> update every shipment on the shared Excel file (Pallet/Boxes – CBM vs Cost), even one Jumbo box.</p>
-      <p style="margin-top:8px"><b>Timing:</b> email Amazon shipment pickups at least 3 days before the pickup date. The app warns you if the pickup date is too close.</p>
+      <p style="margin-top:9px"><b>Mandatory attachments:</b> Bill of Lading (BOL); pallet labels — 4 copies of each individual pallet label; box labels — organized and attached in ascending order.</p>
+      <p style="margin-top:9px"><b>Box list format:</b> list each box individually, in ascending order, one per row. Never group multiple box numbers into a single row.</p>
+      <p style="margin-top:9px"><b>Highlights:</b> boxes needing relabeling must be highlighted in the email body (even if updated labels were sent separately). Cross-brand boxes mixed into the shipment must also be highlighted.</p>
+      <p style="margin-top:9px"><b>UPS shipments:</b> send UPS labels as one label (do not break into FBA + UPS); share the total weight (required to schedule pickup); coordinate across brands so all UPS boxes pick up on one day.</p>
+      <p style="margin-top:9px"><b>Single orders from a Jumbo box:</b> mention Brand, Box #, Item, FNSKU, and Carrier (UPS/FedEx/USPS). Use the "Single order" note field in the brand block.</p>
+      <p style="margin-top:9px"><b>Tracking:</b> update every shipment on the shared Excel file (Pallet/Boxes – CBM vs Cost), even one Jumbo box.</p>
+      <p style="margin-top:9px"><b>Timing:</b> email Amazon shipment pickups at least 3 days before the pickup date. The app warns you if the pickup date is too close.</p>
     </div>
   </div>
 </section>
 
 </main>
-<footer style="display:none" id="appFooter">SHIPMENT CONSOLE · box label stamping + warehouse email builder · access-coded · log is shared with all app users</footer>
+<footer style="display:none" id="appFooter">SHIPMENT CONSOLE · box label stamping + warehouse email builder · access-coded</footer>
 
 <script>
 /* ======================= CONFIG ======================= */
@@ -327,9 +408,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs
 
 let userName = "";
 let pdfBytes = null, pdfName = "";
-let sheetMapping = null;          // {seq: carton}
-let pageAssignments = null;       // [{page, seq}]
-let mappingReady = null;          // {seq: carton} final
+let sheetMapping = null;
+let pageAssignments = null;
+let mappingReady = null;
 let shipType = "UPS";
 let brands = [];
 let attachments = { bol: [], pallet: [], boxes: [] };
@@ -339,13 +420,16 @@ let lastEmail = null;
 function unlock(){
   const code = document.getElementById('gateCode').value.trim();
   const name = document.getElementById('gateName').value.trim();
-  if(code !== ACCESS_CODE){ document.getElementById('gateErr').style.display='block'; return; }
+  if(code !== ACCESS_CODE){ document.getElementById('gateErr').style.display='flex'; return; }
   if(!name){ alert("Please enter your name — it is recorded in the shipment log."); return; }
   userName = name;
   document.getElementById('gate').style.display='none';
   for(const id of ['appHeader','appNav','appFooter']) document.getElementById(id).style.display='';
   document.getElementById('appMain').style.display='block';
-  document.getElementById('userMeta').textContent = "USER: " + userName.toUpperCase() + "  ·  " + new Date().toLocaleDateString();
+  document.getElementById('userMeta').textContent = userName;
+  document.getElementById('avatarLetter').textContent = userName[0].toUpperCase();
+  document.getElementById('dateMeta').textContent = new Date().toLocaleDateString();
+  setShipType('UPS');
   addBrand();
   loadLog();
 }
@@ -364,7 +448,7 @@ function showTab(id){
 document.getElementById('pdfInput').addEventListener('change', async e=>{
   const f = e.target.files[0]; if(!f) return;
   pdfBytes = new Uint8Array(await f.arrayBuffer()); pdfName = f.name;
-  const d = document.getElementById('dropPdf'); d.classList.add('has');
+  document.getElementById('dropPdf').classList.add('has');
   document.getElementById('dropPdfText').innerHTML = '<span class="fname">'+esc(f.name)+'</span> loaded';
   document.getElementById('pdfInfo').textContent = "";
 });
@@ -375,7 +459,7 @@ document.getElementById('xlsInput').addEventListener('change', async e=>{
     const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:'array'});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:null});
     sheetMapping = parseSheetRows(rows);
-    const d = document.getElementById('dropXls'); d.classList.add('has');
+    document.getElementById('dropXls').classList.add('has');
     document.getElementById('dropXlsText').innerHTML = '<span class="fname">'+esc(f.name)+'</span> — '+Object.keys(sheetMapping).length+' carton numbers read';
   }catch(err){ alert("Could not read that sheet: " + err.message); }
 });
@@ -421,7 +505,7 @@ async function analyzeLabels(){
   pageAssignments = [];
 
   if(mode === 'auto'){
-    const rx = /Box\s+(\d+)\s+of\s+(\d+)/i;
+    const rx = /Box\s+(\d+)\s+(?:of|out\s+of)\s+(\d+)/i;
     let current = null;
     for(let p=1;p<=doc.numPages;p++){
       const page = await doc.getPage(p);
@@ -455,7 +539,7 @@ async function analyzeLabels(){
   const missing = seqs.filter(s=>!(s in mapping));
   if(missing.length){ ok=false; html += "<div class='note err'>Sheet has no carton number for box(es): "+missing.join(", ")+".</div>"; }
   const extra = Object.keys(mapping).map(Number).filter(s=>!seqs.includes(s));
-  if(extra.length){ html += "<div class='note warn'>Rows for box(es) "+extra.join(", ")+" have no matching box in the PDF — they will be ignored.</div>"; }
+  if(extra.length && mode==='auto'){ html += "<div class='note warn'>Rows for box(es) "+extra.join(", ")+" have no matching box in the PDF — they will be ignored.</div>"; }
   if(ok){ html += "<div class='note ok'>"+seqs.length+" boxes across "+doc.numPages+" pages. First number → first box. Review, then stamp.</div>"; }
   notes.innerHTML = html;
 
@@ -478,8 +562,8 @@ async function stampPdf(){
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const size = parseInt(document.getElementById('stampSize').value);
     const baseline = parseInt(document.getElementById('stampPos').value);
-    const pages = doc.getPages();
     const strip = document.getElementById('stripAnnots').checked;
+    const pages = doc.getPages();
     for(const a of pageAssignments){
       if(a.seq===null || !(a.seq in mappingReady)) continue;
       const pg = pages[a.page-1];
@@ -499,7 +583,7 @@ async function stampPdf(){
     a.href = URL.createObjectURL(blob);
     a.download = pdfName.replace(/\.pdf$/i,'') + "_with_Box_Numbers.pdf";
     a.click();
-    st.textContent = "Done — stamped PDF downloaded. Attach it as the box labels in step 2.";
+    st.textContent = "Done — stamped PDF downloaded. Attach it as the box labels in the Shipment Email tab.";
   }catch(err){ st.textContent = "Error: " + err.message; }
 }
 
@@ -623,7 +707,7 @@ function buildEmail(show){
       const asc = list.map(x=>({n:parseInt(x.replace(/\D/g,'')),raw:x})).sort((a,c)=>a.n-c.n);
       body += "\nBox List ("+asc.length+" boxes, ascending):\n";
       asc.forEach(x=>{ body += "BOX " + x.raw.replace(/^box\s*/i,'') + "\n"; });
-      const declared = type==='PALLET' ? parseInt(b.boxes||0) : parseInt(b.boxes||0);
+      const declared = parseInt(b.boxes||0);
       if(declared && declared !== asc.length) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": No. of Boxes is "+declared+" but the box list has "+asc.length+" rows."]);
     } else {
       checks.push(["warn",(b.brand||("Brand "+(i+1)))+": no box list provided."]);
@@ -660,7 +744,8 @@ function buildEmail(show){
     const cDiv = document.getElementById('emailChecks');
     cDiv.innerHTML = checks.map(([k,m])=>`<div class="note ${k}">${esc(m)}</div>`).join("") || "<div class='note ok'>All guideline checks passed.</div>";
     if(!checks.some(c=>c[0]==='err') && checks.length) cDiv.innerHTML = "<div class='note ok'>No blocking issues — review the reminders below.</div>" + cDiv.innerHTML;
-    document.getElementById('emailSheet').innerHTML = '<div class="subj">Subject: '+esc(subject)+'</div>'+esc(body);
+    document.getElementById('emailSubj').innerHTML = '<small>Subject</small>'+esc(subject);
+    document.getElementById('emailBody').textContent = body;
     document.getElementById('emailCard').style.display='block';
     document.getElementById('emailCard').scrollIntoView({behavior:'smooth'});
   }
@@ -671,6 +756,17 @@ function copyEmail(){
   if(!lastEmail) return;
   navigator.clipboard.writeText("Subject: "+lastEmail.subject+"\n\n"+lastEmail.body)
     .then(()=>document.getElementById('emailStatus').textContent="Copied.");
+}
+function openGmail(){
+  if(!lastEmail) return;
+  const u = "https://mail.google.com/mail/?view=cm&fs=1"
+    + "&to=" + encodeURIComponent(lastEmail.to)
+    + (lastEmail.cc ? "&cc=" + encodeURIComponent(lastEmail.cc) : "")
+    + "&su=" + encodeURIComponent(lastEmail.subject)
+    + "&body=" + encodeURIComponent(lastEmail.body);
+  window.open(u, '_blank');
+  document.getElementById('emailStatus').textContent =
+    "Gmail opened with the email ready — drag your attachments into the Gmail window, review, and press Send.";
 }
 function openMailto(){
   if(!lastEmail) return;
@@ -705,7 +801,7 @@ function downloadEml(){
   document.getElementById('emailStatus').textContent="Draft downloaded — open it in Outlook, review, and send.";
 }
 
-/* ---------- tab 3: shared log ---------- */
+/* ---------- tab 3: log ---------- */
 const LOG_KEY = "shipment-log";
 /* Storage adapter: uses Claude's shared storage when available,
    otherwise the browser's localStorage (per-device on GitHub Pages). */
@@ -723,6 +819,7 @@ const store = {
     try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
   }
 };
+
 async function logShipment(){
   if(!lastEmail) buildEmail(false);
   const entry = {
@@ -749,7 +846,7 @@ async function loadLog(){
   let list = [];
   const raw = await store.get(LOG_KEY);
   if(raw){ try{ list = JSON.parse(raw); }catch(e){} }
-  if(!list.length){ el.innerHTML = '<div class="empty">No shipments logged yet. Generate an email and press "Save to shipment log".</div>'; return; }
+  if(!list.length){ el.innerHTML = '<div class="empty">No shipments logged yet. Generate an email and press "Save to log".</div>'; return; }
   el.innerHTML = list.map(e=>{
     const brandLine = (e.brands||[]).map(b=>esc(b.brand||"—")+" · "+esc(b.fbaId||"—")+" · "+esc(b.count||"")+" · pickup "+esc(fmtDate(b.pickup)||"—")+" · "+esc(b.carrier||"")).join("<br>");
     return '<div class="entry"><div class="top"><b>'+esc(e.subject||e.type)+'</b>'

@@ -241,12 +241,13 @@
       <div>
         <label for="matchMode">How pages map to boxes</label>
         <select id="matchMode">
-          <option value="fixed2" selected>Sequence — 2 pages per box (1 FBA + 1 UPS), numbers in order</option>
+          <option value="autodetect" selected>Auto-detect layout (recommended)</option>
+          <option value="fixed2">Sequence — 2 pages per box (1 FBA + 1 UPS), numbers in order</option>
           <option value="fixed1">Sequence — 1 page per box, numbers in order</option>
           <option value="combined">Combined — FBA + UPS side by side on ONE page (stamps both labels, rotated)</option>
           <option value="auto">Auto — read "Box X of N" text from the PDF</option>
         </select>
-        <div class="hint">Use Sequence for scanned/image files. Use Combined for pages that hold BOTH the FBA and UPS label side by side — the number stamps twice per page, rotated to match. For Combined, use Large (40 pt) size.</div>
+        <div class="hint">Auto-detect reads the PDF and works out the layout by itself (2 pages per box, 1 per box, or both labels on one page). Only pick a manual mode if the detection gets it wrong.</div>
       </div>
       <div>
         <label for="stampSize">Stamp size</label>
@@ -382,6 +383,7 @@ let pdfBytes = null, pdfName = "";
 let sheetMapping = null;
 let pageAssignments = null;
 let mappingReady = null;
+let resolvedMode = 'fixed2';
 let shipType = "UPS";
 let brands = [];
 let lastEmail = null;
@@ -469,19 +471,47 @@ async function analyzeLabels(){
   const notes = document.getElementById('matchNotes'); notes.innerHTML = "<div class='hint'>Reading PDF pages…</div>";
   document.getElementById('matchCard').style.display='block';
 
-  const mode = document.getElementById('matchMode').value;
+  let mode = document.getElementById('matchMode').value;
   const doc = await pdfjsLib.getDocument({data: pdfBytes.slice()}).promise;
   let html = ""; let ok = true;
   pageAssignments = [];
 
+  const rxBox = /Box\s+(\d+)\s+(?:of|out\s+of)\s+(\d+)/i;
+  async function pageText(n){
+    const pg = await doc.getPage(n);
+    const tc = await pg.getTextContent();
+    return tc.items.map(it=>it.str).join(" ");
+  }
+  if(mode === 'autodetect'){
+    const provided = Object.keys(mapping).length;
+    const t1 = await pageText(1);
+    const m1 = t1.match(rxBox);
+    if(m1){
+      const total = parseInt(m1[2]);
+      const dual = /TRACKING\s*#|UPS\s+(GROUND|STANDARD)/i.test(t1);
+      if(total === doc.numPages){
+        mode = dual ? 'combined' : 'fixed1';
+        html += "<div class='note ok'>Detected: "+total+" boxes, one page per box"+(dual?" with BOTH labels on each page — the number will stamp twice per page, rotated to match the labels":"")+".</div>";
+      } else {
+        mode = 'auto';
+        html += "<div class='note ok'>Detected: "+total+" boxes across "+doc.numPages+" pages — pages grouped by the \"Box X of N\" text.</div>";
+      }
+    } else {
+      mode = (provided === doc.numPages) ? 'fixed1' : 'fixed2';
+      html += "<div class='note ok'>Scanned file (no readable text). Assuming "+(mode==='fixed1'?"1 page":"2 pages")+" per box based on your "+provided+" box number(s) vs "+doc.numPages+" pages.</div>";
+    }
+    if(mode === 'combined' && document.getElementById('stampSize').value === '24'){
+      document.getElementById('stampSize').value = '40';
+      html += "<div class='note warn'>Stamp size set to Large (40 pt) — the approved size for this side-by-side layout.</div>";
+    }
+  }
+  resolvedMode = mode;
+
   if(mode === 'auto'){
-    const rx = /Box\s+(\d+)\s+(?:of|out\s+of)\s+(\d+)/i;
     let current = null;
     for(let p=1;p<=doc.numPages;p++){
-      const page = await doc.getPage(p);
-      const tc = await page.getTextContent();
-      const text = tc.items.map(i=>i.str).join(" ");
-      const m = text.match(rx);
+      const text = await pageText(p);
+      const m = text.match(rxBox);
       if(m) current = parseInt(m[1]);
       pageAssignments.push({page:p, seq:current});
     }
@@ -497,7 +527,7 @@ async function analyzeLabels(){
     const provided = Object.keys(mapping).length;
     if(provided !== expected){
       ok = false;
-      html += "<div class='note err'>The PDF has "+expected+" boxes ("+doc.numPages+" pages ÷ "+per+") but you provided "+provided+" box number(s). Make them match, then try again.</div>";
+      html += "<div class='note err'>The PDF has "+expected+" boxes ("+doc.numPages+" pages ÷ "+per+") but you provided "+provided+" box number(s). If each page actually holds BOTH labels, switch the layout mode — or leave it on Auto-detect.</div>";
     }
   }
 
@@ -543,8 +573,7 @@ async function stampPdf(){
         try{ pg.node.delete(PDFLib.PDFName.of('Annots')); }catch(e){}
       }
       const mb = pg.getMediaBox();  /* some scans have a shifted page origin */
-      const mode = document.getElementById('matchMode').value;
-      if(mode === 'combined'){
+      if(resolvedMode === 'combined'){
         /* Both labels on one rotated page: stamp the number twice (once per
            label), rotated 90° to match the label orientation. Positions are
            taken from the approved example file. Text stamps exactly as given

@@ -243,9 +243,10 @@
         <select id="matchMode">
           <option value="fixed2" selected>Sequence — 2 pages per box (1 FBA + 1 UPS), numbers in order</option>
           <option value="fixed1">Sequence — 1 page per box, numbers in order</option>
+          <option value="combined">Combined — FBA + UPS side by side on ONE page (stamps both labels, rotated)</option>
           <option value="auto">Auto — read "Box X of N" text from the PDF</option>
         </select>
-        <div class="hint">Use Sequence for scanned/image label files. First box number goes on the first page(s), second on the next, and so on.</div>
+        <div class="hint">Use Sequence for scanned/image files. Use Combined for pages that hold BOTH the FBA and UPS label side by side — the number stamps twice per page, rotated to match. For Combined, use Large (40 pt) size.</div>
       </div>
       <div>
         <label for="stampSize">Stamp size</label>
@@ -308,38 +309,7 @@
   </div>
 
   <div class="card">
-    <h2><span class="num">3</span> Attachments <span class="step">embedded into the .eml draft</span></h2>
-    <div class="grid g3">
-      <div>
-        <label>Bill of Lading (BOL) <span id="bolReq" style="color:var(--err);display:none">— mandatory for pallet</span></label>
-        <div class="drop" onclick="document.getElementById('attBOL').click()" id="dropBOL">
-          <input type="file" id="attBOL" accept="application/pdf,image/*">
-          <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div>
-          <div id="dropBOLText">Attach BOL</div>
-        </div>
-      </div>
-      <div>
-        <label>Pallet labels <span style="color:var(--mut);text-transform:none">(4 copies of each)</span></label>
-        <div class="drop" onclick="document.getElementById('attPallet').click()" id="dropPallet">
-          <input type="file" id="attPallet" accept="application/pdf" multiple>
-          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg></div>
-          <div id="dropPalletText">Attach pallet labels</div>
-        </div>
-      </div>
-      <div>
-        <label>Box labels <span style="color:var(--mut);text-transform:none">(ascending order)</span></label>
-        <div class="drop" onclick="document.getElementById('attBoxes').click()" id="dropBoxes">
-          <input type="file" id="attBoxes" accept="application/pdf" multiple>
-          <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 8.4 12 3 3 8.4v7.2L12 21l9-5.4V8.4zM12 5.3l6.1 3.6L12 12.6 5.9 8.9 12 5.3z"/></svg></div>
-          <div id="dropBoxesText">Attach box labels (use the stamped PDF from step 1)</div>
-        </div>
-      </div>
-    </div>
-    <div class="hint">Gmail and mail apps can't receive attachments through a link — add them in the compose window, or use the <b>.eml draft</b> which opens in Outlook with everything already attached.</div>
-  </div>
-
-  <div class="card">
-    <h2><span class="num">4</span> Recipients <span class="step">USA warehouse team</span></h2>
+    <h2><span class="num">3</span> Recipients <span class="step">USA warehouse team</span></h2>
     <div class="grid g2">
       <div><label for="toEmails">To (comma-separated)</label><input id="toEmails" placeholder="warehouse@company.com"></div>
       <div><label for="ccEmails">Cc (optional)</label><input id="ccEmails" placeholder="ops@company.com"></div>
@@ -352,21 +322,22 @@
   </div>
 
   <div class="card" id="emailCard" style="display:none">
-    <h2><span class="num">5</span> Email preview <span class="step">guideline checks below</span></h2>
+    <h2><span class="num">4</span> Email preview <span class="step">guideline checks below</span></h2>
     <div id="emailChecks"></div>
     <div class="sheet"><div class="subj" id="emailSubj"></div><div class="bodytxt" id="emailBody"></div></div>
     <div class="row" style="margin-top:18px">
       <button class="btn gmail" onclick="openGmail()">
         <svg viewBox="0 0 24 24"><path fill="#EA4335" d="M5.3 18.7H3.5A1.5 1.5 0 0 1 2 17.2V7.4l3.3 2.5v8.8z"/><path fill="#4285F4" d="M18.7 18.7h1.8a1.5 1.5 0 0 0 1.5-1.5V7.4l-3.3 2.5v8.8z"/><path fill="#FBBC04" d="M2 7.4V6.2c0-1.2 1.4-1.9 2.4-1.2L5.3 6l6.7 5 6.7-5 .9-1c1-.7 2.4 0 2.4 1.2v1.2L12 14.9 2 7.4z"/><path fill="#34A853" d="m5.3 6 6.7 5 6.7-5v3.9L12 14.9 5.3 9.9V6z"/></svg>
         Open in Gmail</button>
-      <button class="btn" onclick="downloadEml()">
-        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        .eml draft (with attachments)</button>
+      <button class="btn" onclick="copyRich()">
+        <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+        Copy for Gmail (with table)</button>
       <button class="btn alt" onclick="openMailto()">Mail app</button>
-      <button class="btn alt" onclick="copyEmail()">Copy text</button>
+      <button class="btn alt" onclick="copyEmail()">Copy plain text</button>
       <button class="btn alt" onclick="logShipment()">Save to log</button>
     </div>
-    <div class="hint" id="emailStatus" style="margin-top:10px"></div>
+    <div class="hint" style="margin-top:10px">Best flow: press <b>Copy for Gmail</b>, then <b>Open in Gmail</b>, paste into the body (Ctrl+V) — the box table pastes fully formatted. Attach the BOL and labels manually in Gmail before sending.</div>
+    <div class="hint" id="emailStatus" style="margin-top:6px"></div>
   </div>
 </section>
 
@@ -385,8 +356,8 @@
     <h2><span class="num">?</span> Shipping &amp; documentation guidelines</h2>
     <div style="font-size:13.5px;line-height:1.75">
       <p><b>Required email details (in the body, explicitly):</b> Brand · FBA ID · Pickup Date · No. of Pallets / No. of Boxes · Carrier.</p>
-      <p style="margin-top:9px"><b>Mandatory attachments:</b> Bill of Lading (BOL); pallet labels — 4 copies of each individual pallet label; box labels — organized and attached in ascending order.</p>
-      <p style="margin-top:9px"><b>Box list format:</b> list each box individually, in ascending order, one per row. Never group multiple box numbers into a single row.</p>
+      <p style="margin-top:9px"><b>Mandatory attachments (added manually in Gmail):</b> Bill of Lading (BOL); pallet labels — 4 copies of each individual pallet label; box labels — organized and attached in ascending order.</p>
+      <p style="margin-top:9px"><b>Box list format:</b> a table with Carton No, FNSKU USA, and Product Name — each box on its own row, ascending order, never grouped.</p>
       <p style="margin-top:9px"><b>Highlights:</b> boxes needing relabeling must be highlighted in the email body (even if updated labels were sent separately). Cross-brand boxes mixed into the shipment must also be highlighted.</p>
       <p style="margin-top:9px"><b>UPS shipments:</b> send UPS labels as one label (do not break into FBA + UPS); share the total weight (required to schedule pickup); coordinate across brands so all UPS boxes pick up on one day.</p>
       <p style="margin-top:9px"><b>Single orders from a Jumbo box:</b> mention Brand, Box #, Item, FNSKU, and Carrier (UPS/FedEx/USPS). Use the "Single order" note field in the brand block.</p>
@@ -413,7 +384,6 @@ let pageAssignments = null;
 let mappingReady = null;
 let shipType = "UPS";
 let brands = [];
-let attachments = { bol: [], pallet: [], boxes: [] };
 let lastEmail = null;
 
 /* ---------- gate ---------- */
@@ -516,7 +486,7 @@ async function analyzeLabels(){
       pageAssignments.push({page:p, seq:current});
     }
   } else {
-    const per = mode === 'fixed1' ? 1 : 2;
+    const per = (mode === 'fixed1' || mode === 'combined') ? 1 : 2;
     for(let p=1;p<=doc.numPages;p++){
       pageAssignments.push({page:p, seq: Math.floor((p-1)/per)+1});
     }
@@ -572,10 +542,28 @@ async function stampPdf(){
            cover the stamp — remove them so the new box number shows cleanly. */
         try{ pg.node.delete(PDFLib.PDFName.of('Annots')); }catch(e){}
       }
-      const txt = "BOX " + mappingReady[a.seq];
-      const w = font.widthOfTextAtSize(txt, size);
       const mb = pg.getMediaBox();  /* some scans have a shifted page origin */
-      pg.drawText(txt, { x: mb.x + (mb.width - w)/2, y: mb.y + baseline, size, font, color: rgb(0,0,0) });
+      const mode = document.getElementById('matchMode').value;
+      if(mode === 'combined'){
+        /* Both labels on one rotated page: stamp the number twice (once per
+           label), rotated 90° to match the label orientation. Positions are
+           taken from the approved example file. Text stamps exactly as given
+           (e.g. "F-372"), no BOX prefix. */
+        const txt = String(mappingReady[a.seq]);
+        const w = font.widthOfTextAtSize(txt, size);
+        const spots = [[0.872, 0.259], [0.531, 0.734]];  /* FBA label, UPS label */
+        for(const [cx, cy] of spots){
+          pg.drawText(txt, {
+            x: mb.x + cx*mb.width + size*0.28,
+            y: mb.y + cy*mb.height - w/2,
+            size, font, color: rgb(0,0,0), rotate: PDFLib.degrees(90)
+          });
+        }
+      } else {
+        const txt = "BOX " + mappingReady[a.seq];
+        const w = font.widthOfTextAtSize(txt, size);
+        pg.drawText(txt, { x: mb.x + (mb.width - w)/2, y: mb.y + baseline, size, font, color: rgb(0,0,0) });
+      }
     }
     const out = await doc.save();
     const blob = new Blob([out], {type:'application/pdf'});
@@ -627,8 +615,8 @@ function renderBrands(){
         `}
       </div>
       <div class="grid g3" style="margin-top:12px">
-        <div><label>Box list (one per line, ascending)</label><textarea rows="5" oninput="upd(${i},'boxList',this.value)" placeholder="14589&#10;19292&#10;21742">${esc(b.boxList)}</textarea>
-          <div class="hint">Each box on its own line — never grouped.</div></div>
+        <div><label>Box list — Carton No, FNSKU, Product (paste from Excel)</label><textarea rows="5" oninput="upd(${i},'boxList',this.value)" placeholder="14589&#9;B0FCM23THC&#9;Salt and Pepper - Chess Design&#10;19292&#9;B0FC658B5S&#9;Mini Butter Keeper">${esc(b.boxList)}</textarea>
+          <div class="hint">One box per line, ascending. Copy rows straight from Excel (Carton No, FNSKU USA, Product Name) — or just carton numbers.</div></div>
         <div><label>Relabeling required — box #s</label><textarea rows="5" oninput="upd(${i},'relabel',this.value)" placeholder="22141">${esc(b.relabel)}</textarea>
           <div class="hint">Highlighted in the email body.</div></div>
         <div><label>Cross-brand boxes — box #s</label><textarea rows="5" oninput="upd(${i},'crossBrand',this.value)" placeholder="Box 22874 belongs to Radicaln">${esc(b.crossBrand)}</textarea>
@@ -640,20 +628,6 @@ function renderBrands(){
     c.appendChild(div);
   });
 }
-
-for(const [id,key] of [['attBOL','bol'],['attPallet','pallet'],['attBoxes','boxes']]){
-  document.getElementById(id).addEventListener('change', async e=>{
-    const files = [...e.target.files]; if(!files.length) return;
-    attachments[key] = [];
-    for(const f of files){
-      attachments[key].push({ name:f.name, type:f.type||'application/octet-stream', b64: await toB64(f) });
-    }
-    const dropId = 'drop'+id.slice(3);
-    document.getElementById(dropId).classList.add('has');
-    document.getElementById(dropId+'Text').innerHTML = files.map(f=>'<span class="fname">'+esc(f.name)+'</span>').join('<br>');
-  });
-}
-function toB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
 
 function fmtDate(iso){
   if(!iso) return "";
@@ -697,19 +671,25 @@ function buildEmail(show){
       if(days < 3) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": pickup is in "+days+" day(s). Guidelines ask for the email to go out at least 3 days before pickup."]);
     }
 
-    const list = parseList(b.boxList);
-    if(list.length){
-      const grouped = list.filter(x=>/[,;]|(\d\s*[-–]\s*\d)|\band\b/i.test(x));
-      if(grouped.length) checks.push(["err",(b.brand||("Brand "+(i+1)))+": box list has grouped rows ("+grouped[0]+"). List each box individually, one per row."]);
-      const nums = list.map(x=>parseInt(x.replace(/\D/g,'')));
+    const rows = parseList(b.boxList).map(line=>{
+      const parts = line.split(/\t|\s{2,}|\s*\|\s*/).map(x=>x.trim()).filter(Boolean);
+      return { carton: parts[0]||"", fnsku: parts[1]||"", product: parts.slice(2).join(" ")||"" };
+    }).filter(r=>r.carton);
+    if(rows.length){
+      const bad = rows.filter(r=>/[,;]|\band\b/i.test(r.carton) || /\d\s*[-\u2013]\s*\d/.test(r.carton));
+      if(bad.length) checks.push(["err",(b.brand||("Brand "+(i+1)))+": box list has grouped carton numbers ("+bad[0].carton+"). List each box individually, one per row."]);
+      const nums = rows.map(r=>parseInt(String(r.carton).replace(/\D/g,'')));
       const sorted = [...nums].sort((a,c)=>a-c);
       if(JSON.stringify(nums)!==JSON.stringify(sorted)) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": box list is not in ascending order — it will be sorted automatically in the email."]);
-      const asc = list.map(x=>({n:parseInt(x.replace(/\D/g,'')),raw:x})).sort((a,c)=>a.n-c.n);
+      const asc = [...rows].sort((a,c)=>parseInt(String(a.carton).replace(/\D/g,''))-parseInt(String(c.carton).replace(/\D/g,'')));
+      b._tableRows = asc;
       body += "\nBox List ("+asc.length+" boxes, ascending):\n";
-      asc.forEach(x=>{ body += "BOX " + x.raw.replace(/^box\s*/i,'') + "\n"; });
+      body += "Carton No | FNSKU USA | Product Name\n";
+      asc.forEach(r=>{ body += r.carton + " | " + (r.fnsku||"-") + " | " + (r.product||"-") + "\n"; });
       const declared = parseInt(b.boxes||0);
       if(declared && declared !== asc.length) checks.push(["warn",(b.brand||("Brand "+(i+1)))+": No. of Boxes is "+declared+" but the box list has "+asc.length+" rows."]);
     } else {
+      b._tableRows = [];
       checks.push(["warn",(b.brand||("Brand "+(i+1)))+": no box list provided."]);
     }
 
@@ -721,24 +701,52 @@ function buildEmail(show){
   });
 
   body += "\n" + "-".repeat(46) + "\n";
-  const attNames = [...attachments.bol, ...attachments.pallet, ...attachments.boxes].map(a=>a.name);
-  body += "Attachments: " + (attNames.length ? attNames.join(", ") : "—") + "\n";
   body += "\nPlease confirm the pickup schedule.\n\nBest regards,\n" + userName + "\n";
 
   if(type==='PALLET'){
-    if(!attachments.bol.length) checks.push(["err","BOL is mandatory for pallet shipments — attach it."]);
-    if(!attachments.pallet.length) checks.push(["warn","No pallet labels attached — 4 copies of each pallet label are required."]);
+    checks.push(["warn","Attach in Gmail before sending: BOL (mandatory) + 4 copies of each pallet label + box labels in ascending order."]);
   } else {
-    checks.push(["warn","Reminder: UPS labels must be sent as ONE label — do not split into FBA + UPS."]);
+    checks.push(["warn","Attach the box labels (ascending) in Gmail before sending. UPS labels must be sent as ONE label — do not split into FBA + UPS."]);
   }
-  if(!attachments.boxes.length) checks.push(["warn","No box labels attached — attach them in ascending order (use the stamped PDF from step 1)."]);
   if(!document.getElementById('toEmails').value.trim()) checks.push(["err","Add at least one recipient email."]);
   checks.push(["warn","After sending: update the master Excel (Pallet/Boxes – CBM vs Cost)."]);
 
   const dates = [...new Set(brands.map(b=>fmtDate(b.pickup)).filter(Boolean))];
   const subject = (type==='PALLET'?"Pallet Shipment":"UPS Shipment") + " – " + (bNames.join(" & ")||"Brand") + (dates.length?(" – Pickup "+dates.join(" / ")):"");
 
-  lastEmail = { subject, body, to: document.getElementById('toEmails').value.trim(), cc: document.getElementById('ccEmails').value.trim() };
+  /* HTML version — pasting into Gmail keeps the table formatted like the Excel sheet */
+  const td = "border:1px solid #444;padding:5px 10px;text-align:center;font-family:Arial;font-size:13px";
+  let htmlBody = "<div style='font-family:Arial;font-size:13.5px'>Hi Team,<br><br>Please find below the shipment details:";
+  brands.forEach((b)=>{
+    htmlBody += "<br><br><b>Brand:</b> "+esc(b.brand||"—")
+      + "<br><b>FBA ID:</b> "+esc(b.fbaId||"—")
+      + "<br><b>Pickup Date:</b> "+esc(fmtDate(b.pickup)||"—");
+    if(type==='PALLET'){
+      htmlBody += "<br><b>Shipment Type:</b> Pallet<br><b>No. of Pallets:</b> "+esc(b.pallets||"—")
+        + (b.boxes?("<br><b>No. of Boxes:</b> "+esc(b.boxes)):"")
+        + "<br><b>Carrier:</b> "+esc(b.carrier||"—");
+    } else {
+      htmlBody += "<br><b>Shipment Type:</b> UPS Boxes<br><b>No. of Boxes:</b> "+esc(b.boxes||"—")
+        + "<br><b>Carrier:</b> UPS<br><b>Total Weight:</b> "+esc(b.weight?b.weight+" lb":"—");
+    }
+    const trows = b._tableRows||[];
+    if(trows.length){
+      htmlBody += "<br><br><table style='border-collapse:collapse'><tr>"
+        + "<th style='"+td+";background:#f2f2f2'>Carton No</th>"
+        + "<th style='"+td+";background:#f2f2f2'>FNSKU USA</th>"
+        + "<th style='"+td+";background:#f2f2f2'>Product Name</th></tr>";
+      trows.forEach(r=>{ htmlBody += "<tr><td style='"+td+"'>"+esc(r.carton)+"</td><td style='"+td+"'>"+esc(r.fnsku||"-")+"</td><td style='"+td+"'>"+esc(r.product||"-")+"</td></tr>"; });
+      htmlBody += "</table>";
+    }
+    const relH = parseList(b.relabel);
+    if(relH.length) htmlBody += "<br><b style='background:#fff2a8'>RELABELING REQUIRED — box numbers: "+esc(relH.join(", "))+"</b>";
+    const crossH = parseList(b.crossBrand);
+    if(crossH.length) htmlBody += "<br><b style='background:#fff2a8'>CROSS-BRAND BOXES: "+esc(crossH.join("; "))+"</b>";
+    if(b.singleOrder.trim()) htmlBody += "<br><b>Single order (Jumbo box):</b> "+esc(b.singleOrder.trim());
+  });
+  htmlBody += "<br><br>Please confirm the pickup schedule.<br><br>Best regards,<br>"+esc(userName)+"</div>";
+
+  lastEmail = { subject, body, htmlBody, to: document.getElementById('toEmails').value.trim(), cc: document.getElementById('ccEmails').value.trim() };
 
   if(show){
     const cDiv = document.getElementById('emailChecks');
@@ -756,6 +764,19 @@ function copyEmail(){
   if(!lastEmail) return;
   navigator.clipboard.writeText("Subject: "+lastEmail.subject+"\n\n"+lastEmail.body)
     .then(()=>document.getElementById('emailStatus').textContent="Copied.");
+}
+async function copyRich(){
+  if(!lastEmail) return;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([lastEmail.htmlBody], {type:"text/html"}),
+      "text/plain": new Blob([lastEmail.body], {type:"text/plain"})
+    })]);
+    document.getElementById('emailStatus').textContent = "Copied with formatting — paste into the Gmail body (Ctrl+V).";
+  }catch(e){
+    navigator.clipboard.writeText(lastEmail.body);
+    document.getElementById('emailStatus').textContent = "Copied as plain text (this browser doesn't allow rich copy).";
+  }
 }
 function openGmail(){
   if(!lastEmail) return;
@@ -777,30 +798,6 @@ function openMailto(){
   window.open(u,'_blank');
   document.getElementById('emailStatus').textContent="Opened in mail app — attach the documents manually there.";
 }
-function downloadEml(){
-  if(!lastEmail) return;
-  const B = "----=_ShipmentConsole_"+Date.now();
-  let eml = "";
-  if(lastEmail.to) eml += "To: "+lastEmail.to+"\r\n";
-  if(lastEmail.cc) eml += "Cc: "+lastEmail.cc+"\r\n";
-  eml += "Subject: "+lastEmail.subject+"\r\nX-Unsent: 1\r\nMIME-Version: 1.0\r\n";
-  eml += 'Content-Type: multipart/mixed; boundary="'+B+'"\r\n\r\n';
-  eml += "--"+B+"\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"+lastEmail.body+"\r\n";
-  for(const a of [...attachments.bol, ...attachments.pallet, ...attachments.boxes]){
-    eml += "--"+B+'\r\nContent-Type: '+a.type+'; name="'+a.name+'"\r\n';
-    eml += "Content-Transfer-Encoding: base64\r\n";
-    eml += 'Content-Disposition: attachment; filename="'+a.name+'"\r\n\r\n';
-    eml += a.b64.replace(/(.{76})/g,"$1\r\n")+"\r\n";
-  }
-  eml += "--"+B+"--";
-  const blob = new Blob([eml], {type:'message/rfc822'});
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = lastEmail.subject.replace(/[^\w\- ]/g,'').slice(0,60)+".eml";
-  link.click();
-  document.getElementById('emailStatus').textContent="Draft downloaded — open it in Outlook, review, and send.";
-}
-
 /* ---------- tab 3: log ---------- */
 const LOG_KEY = "shipment-log";
 /* Storage adapter: uses Claude's shared storage when available,

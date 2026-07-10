@@ -484,12 +484,19 @@ async function analyzeLabels(){
   }
   if(mode === 'autodetect'){
     const provided = Object.keys(mapping).length;
-    const t1 = await pageText(1);
+    const pg1 = await doc.getPage(1);
+    const vw = pg1.view; const pgW = vw[2]-vw[0], pgH = vw[3]-vw[1];
+    const tc1 = await pg1.getTextContent();
+    const t1 = tc1.items.map(it=>it.str).join(" ");
+    /* Rotated text = labels printed sideways on the page (side-by-side layout) */
+    const rotated = tc1.items.some(it=>it.str.trim().length>2 && Math.abs(it.transform[0])<0.01 && Math.abs(it.transform[1])>0.01);
     const m1 = t1.match(rxBox);
     if(m1){
       const total = parseInt(m1[2]);
-      const dual = /TRACKING\s*#|UPS\s+(GROUND|STANDARD)/i.test(t1);
       if(total === doc.numPages){
+        /* One page per box. Decide single label vs BOTH labels side by side:
+           UPS text present, OR rotated text on a big (letter-size) page. */
+        const dual = /TRACKING\s*#|UPS\s+(GROUND|STANDARD)/i.test(t1) || (rotated && Math.min(pgW,pgH) >= 450);
         mode = dual ? 'combined' : 'fixed1';
         html += "<div class='note ok'>Detected: "+total+" boxes, one page per box"+(dual?" with BOTH labels on each page — the number will stamp twice per page, rotated to match the labels":"")+".</div>";
       } else {
@@ -504,6 +511,18 @@ async function analyzeLabels(){
       document.getElementById('stampSize').value = '40';
       html += "<div class='note warn'>Stamp size set to Large (40 pt) — the approved size for this side-by-side layout.</div>";
     }
+  } else if(mode === 'fixed1' || mode === 'fixed2'){
+    /* Safety net: warn if a manual mode is chosen but the file looks like the side-by-side layout */
+    try{
+      const pg1 = await doc.getPage(1);
+      const vw = pg1.view; const pgW = vw[2]-vw[0], pgH = vw[3]-vw[1];
+      const tc1 = await pg1.getTextContent();
+      const rot = tc1.items.some(it=>it.str.trim().length>2 && Math.abs(it.transform[0])<0.01 && Math.abs(it.transform[1])>0.01);
+      const mm = tc1.items.map(it=>it.str).join(" ").match(rxBox);
+      if(rot && Math.min(pgW,pgH) >= 450 && mm && parseInt(mm[2]) === doc.numPages){
+        html += "<div class='note warn'>This file looks like the side-by-side layout (both labels on one page). The Combined mode — or Auto-detect — will stamp the number on BOTH labels.</div>";
+      }
+    }catch(e){}
   }
   resolvedMode = mode;
 
